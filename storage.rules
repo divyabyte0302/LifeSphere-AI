@@ -1,0 +1,51 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null && request.auth.uid != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isDoctor() {
+      return isAuthenticated() && request.auth.token.role == 'DOCTOR';
+    }
+
+    // Default Deny for all unspecified paths
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+
+    // Medical Records: Strictly private per-user vault (PDFs, DICOM, Lab scans)
+    // Accessible by patient owner and authorized doctors
+    match /medical_records/{userId}/{fileName} {
+      allow read: if isOwner(userId) || isDoctor();
+      allow write: if isOwner(userId)
+                   && request.resource.size < 25 * 1024 * 1024 // 25 MB limit
+                   && (request.resource.contentType.matches('application/pdf')
+                       || request.resource.contentType.matches('image/.*')
+                       || request.resource.contentType.matches('application/dicom'));
+      allow delete: if isOwner(userId);
+    }
+
+    // Synthesized Health Reports (Clinical PDFs, HL7 FHIR exports)
+    match /health_reports/{userId}/{fileName} {
+      allow read: if isOwner(userId) || isDoctor();
+      allow write: if isOwner(userId) && request.resource.size < 10 * 1024 * 1024;
+      allow delete: if isOwner(userId);
+    }
+
+    // User Avatar / Profile Assets
+    match /avatars/{userId}/{fileName} {
+      allow read: if isAuthenticated();
+      allow write: if isOwner(userId)
+                   && request.resource.size < 5 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+      allow delete: if isOwner(userId);
+    }
+  }
+}

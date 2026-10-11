@@ -1,0 +1,53 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="ai.lifesphere.app">
+
+    <!-- 
+      LifeSphere AI - Android Permissions Rationale:
+      - INTERNET: Required to fetch ambient environmental air quality (AQI, PM2.5, UV) and AI clinical insights.
+      - ACCESS_FINE_LOCATION & ACCESS_COARSE_LOCATION: Required only to fetch localized environmental data matching user coordinates.
+      - BODY_SENSORS & BODY_SENSORS_BACKGROUND: Required only when user connects wearable heart rate / ECG monitors.
+      - BLUETOOTH_SCAN & BLUETOOTH_CONNECT: Required to pair and receive telemetry from BLE pulse oximeters and particulate sensors.
+      - POST_NOTIFICATIONS: Required for urgent environmental hazard alerts (AQI spike > 150) and medication adherence reminders.
+      No unnecessary or intrusive permissions are requested.
+    -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.BODY_SENSORS" />
+    <uses-permission android:name="android.permission.BODY_SENSORS_BACKGROUND" />
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <application
+        android:label="LifeSphere AI"
+        android:name="${applicationName}"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:theme="@style/LaunchTheme"
+        android:supportsRtl="true"
+        android:hardwareAccelerated="true">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:theme="@style/LaunchTheme"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:windowSoftInputMode="adjustResize">
+            
+            <meta-data
+              android:name="io.flutter.embedding.android.NormalTheme"
+              android:resource="@style/NormalTheme"
+              />
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+        
+        <meta-data
+            android:name="flutterEmbedding"
+            android:value="2" />
+    </application>
+</manifest>

@@ -1,0 +1,164 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User profile with role claims (USER, DOCTOR, ADMIN). Complete medical records are strictly separated for least privilege.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "format": "email", "maxLength": 256 },
+        "displayName": { "type": "string", "maxLength": 128 },
+        "role": { "type": "string", "enum": ["USER", "DOCTOR", "ADMIN"] },
+        "status": { "type": "string", "enum": ["ACTIVE", "SUSPENDED", "PENDING_MFA"] },
+        "emailVerified": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "email", "role", "status", "createdAt"]
+    },
+    "MedicalRecord": {
+      "title": "Clinical Medical Record",
+      "description": "Sensitive protected health information (PHI). Resticted to patient and assigned DOCTOR. Never accessible to ADMIN by default.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 256 },
+        "category": { "type": "string", "maxLength": 64 },
+        "diagnosis": { "type": "string", "maxLength": 1024 },
+        "assignedDoctorId": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "title", "category", "createdAt"]
+    },
+    "SystemMetric": {
+      "title": "Infrastructure Metric",
+      "description": "Cluster CPU, memory, uptime, and microservice status. Accessible only to ADMIN role.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "cpuUsagePercent": { "type": "number" },
+        "memoryUsagePercent": { "type": "number" },
+        "activeContainerInstances": { "type": "integer" },
+        "platformUptimePercent": { "type": "number" },
+        "status": { "type": "string", "enum": ["OPTIMAL", "DEGRADED", "CRITICAL"] },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "cpuUsagePercent", "memoryUsagePercent", "status", "timestamp"]
+    },
+    "SecurityEvent": {
+      "title": "Security Threat Event",
+      "description": "SIEM logs of brute-force attempts, unauthorized access blocks, and key rotations.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "eventType": { "type": "string", "maxLength": 128 },
+        "severity": { "type": "string", "enum": ["CRITICAL", "HIGH", "MEDIUM", "LOW"] },
+        "sourceIp": { "type": "string", "maxLength": 64 },
+        "details": { "type": "string", "maxLength": 1024 },
+        "status": { "type": "string", "enum": ["BLOCKED", "MITIGATED", "AUDITED", "FLAGGED"] },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "eventType", "severity", "sourceIp", "status", "timestamp"]
+    },
+    "AuditLog": {
+      "title": "HIPAA Audit Trail Entry",
+      "description": "Immutable append-only compliance audit trail under HIPAA § 164.312(b).",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "actor": { "type": "string", "maxLength": 128 },
+        "actorRole": { "type": "string", "enum": ["ADMIN", "SYSTEM", "DOCTOR", "USER"] },
+        "action": { "type": "string", "maxLength": 128 },
+        "resource": { "type": "string", "maxLength": 256 },
+        "outcome": { "type": "string", "enum": ["SUCCESS", "DENIED", "FLAGGED"] },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "actor", "actorRole", "action", "outcome", "timestamp"]
+    },
+    "PatientAuthorization": {
+      "title": "Patient Authorization & Consent",
+      "description": "Patient authorization grant and revocation record. Doctors only see patients who have explicitly authorized access.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "patientId": { "type": "string", "maxLength": 128 },
+        "patientName": { "type": "string", "maxLength": 128 },
+        "doctorId": { "type": "string", "maxLength": 128 },
+        "status": { "type": "string", "enum": ["AUTHORIZED", "REVOKED", "EXPIRED"] },
+        "grantedAt": { "type": "string", "format": "date-time" },
+        "revokedAt": { "type": "string" },
+        "expiresAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "patientId", "doctorId", "status", "grantedAt", "expiresAt"]
+    },
+    "DoctorCareNote": {
+      "title": "Doctor Care Note & Directives",
+      "description": "Physician-entered care directives and recommendations. Protected from silent AI overwrites with physician override lock.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "patientId": { "type": "string", "maxLength": 128 },
+        "doctorId": { "type": "string", "maxLength": 128 },
+        "doctorName": { "type": "string", "maxLength": 128 },
+        "recommendations": { "type": "array", "items": { "type": "string" } },
+        "followUpDate": { "type": "string" },
+        "careInstructions": { "type": "string", "maxLength": 2048 },
+        "carePlanInformation": { "type": "string", "maxLength": 2048 },
+        "isPhysicianOverride": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "patientId", "doctorId", "careInstructions", "isPhysicianOverride", "createdAt"]
+    },
+    "DoctorAccessLog": {
+      "title": "Doctor Access Audit Log",
+      "description": "Immutable log of every physician access to patient charts, reports, and timelines under HIPAA § 164.506/164.312(b).",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "doctorId": { "type": "string", "maxLength": 128 },
+        "doctorName": { "type": "string", "maxLength": 128 },
+        "patientId": { "type": "string", "maxLength": 128 },
+        "accessedFeature": { "type": "string", "maxLength": 64 },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "purposeOfAccess": { "type": "string", "maxLength": 256 },
+        "clientIp": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "doctorId", "patientId", "accessedFeature", "timestamp", "purposeOfAccess"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "#/entities/User",
+      "description": "User profiles and RBAC role assignments."
+    },
+    "/medical_records/{recordId}": {
+      "schema": "#/entities/MedicalRecord",
+      "description": "Protected Health Information (PHI). Zero default access for administrators."
+    },
+    "/system_metrics/{metricId}": {
+      "schema": "#/entities/SystemMetric",
+      "description": "Platform infrastructure metrics, restricted to verified ADMIN role."
+    },
+    "/security_events/{eventId}": {
+      "schema": "#/entities/SecurityEvent",
+      "description": "Security incident and threat events, restricted to verified ADMIN role."
+    },
+    "/audit_logs/{logId}": {
+      "schema": "#/entities/AuditLog",
+      "description": "Immutable append-only audit trail logs."
+    },
+    "/patient_authorizations/{authId}": {
+      "schema": "#/entities/PatientAuthorization",
+      "description": "Patient consent records governing physician chart access."
+    },
+    "/doctor_care_notes/{noteId}": {
+      "schema": "#/entities/DoctorCareNote",
+      "description": "Physician-entered care directives with override protection against AI alteration."
+    },
+    "/doctor_access_logs/{logId}": {
+      "schema": "#/entities/DoctorAccessLog",
+      "description": "Immutable audit logs of all doctor accesses to patient data."
+    }
+  }
+}

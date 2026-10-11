@@ -1,0 +1,8 @@
+# LifeSphere AI Android Release Keystore Properties
+# WARNING: NEVER commit actual key.properties or keystore files to version control!
+# Copy this file to 'android/key.properties' and fill in your secure release credentials.
+
+storePassword=YOUR_KEYSTORE_PASSWORD
+keyPassword=YOUR_KEY_PASSWORD
+keyAlias=lifesphere-release-key
+storeFile=../lifesphere_release.jks

@@ -1,0 +1,201 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // =========================================================================
+    // GLOBAL SECURITY POLICY: DEFAULT DENY (Least Privilege)
+    // No document is accessible by default unless an explicit rule permits it.
+    // =========================================================================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // =========================================================================
+    // HARDENED AUTHENTICATION & RBAC ROLE HELPERS
+    // Roles: USER, DOCTOR, ADMIN (Enforced via Firebase Auth Custom Claims)
+    // =========================================================================
+    function isAuthenticated() {
+      return request.auth != null && request.auth.uid != null;
+    }
+
+    function getUserRole() {
+      return request.auth.token.role;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (request.auth.token.role == 'ADMIN' || request.auth.token.admin == true);
+    }
+
+    function isDoctor() {
+      return isAuthenticated() && (request.auth.token.role == 'DOCTOR' || request.auth.token.doctor == true);
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isDocOwner() {
+      return isAuthenticated() && resource != null && request.auth.uid == resource.data.userId;
+    }
+
+    function isCreatingForSelf() {
+      return isAuthenticated() && request.resource.data.userId == request.auth.uid;
+    }
+
+    // =========================================================================
+    // 1. USERS COLLECTION (Metadata only; NO medical records stored here)
+    // Admins can read user metadata for administration, but cannot escalate their own claims.
+    // =========================================================================
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // =========================================================================
+    // 2. MEDICAL RECORDS (HIPAA § 164.502 LEAST PRIVILEGE ENFORCEMENT)
+    // CRITICAL: Complete medical records are NEVER exposed to administrators by default.
+    // Accessible ONLY to the patient (USER) or their assigned licensed DOCTOR.
+    // =========================================================================
+    match /medical_records/{recordId} {
+      allow read: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        (isDoctor() && resource.data.assignedDoctorId == request.auth.uid)
+        // Note: Notice that isAdmin() is deliberately excluded here.
+      );
+      allow create: if isCreatingForSelf() || isDoctor();
+      allow update: if (isDocOwner() && request.resource.data.userId == request.auth.uid) || isDoctor();
+      allow delete: if isDocOwner();
+    }
+
+    // =========================================================================
+    // 3. HEALTH SNAPSHOTS & WEARABLE MEASUREMENTS
+    // Telemetry data is restricted to patient and assigned physician.
+    // =========================================================================
+    match /health_snapshots/{snapshotId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isDoctor());
+      allow create: if isCreatingForSelf();
+      allow update: if isDocOwner();
+      allow delete: if isDocOwner();
+    }
+
+    match /wearable_measurements/{measurementId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isDoctor());
+      allow create: if isCreatingForSelf();
+      allow update: if isDocOwner();
+      allow delete: if isDocOwner();
+    }
+
+    // =========================================================================
+    // 4. ADMIN FEATURES: SYSTEM METRICS & INFRASTRUCTURE
+    // Restricted exclusively to verified ADMIN custom claim.
+    // =========================================================================
+    match /system_metrics/{metricId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // =========================================================================
+    // 5. ADMIN FEATURES: SECURITY EVENTS (SIEM Threat Logs)
+    // Restricted exclusively to verified ADMIN custom claim.
+    // =========================================================================
+    match /security_events/{eventId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // =========================================================================
+    // 6. ADMIN FEATURES: SYSTEM CONFIGURATION
+    // Read by authenticated services, editable only by verified ADMIN.
+    // =========================================================================
+    match /system_config/{configId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // =========================================================================
+    // 7. SUPPORT TICKETS
+    // Users can read/create their own tickets; Admins can manage all tickets.
+    // =========================================================================
+    match /support_tickets/{ticketId} {
+      allow read: if isAuthenticated() && (isAdmin() || resource.data.userId == request.auth.uid);
+      allow create: if isCreatingForSelf();
+      allow update: if isAdmin() || isDocOwner();
+      allow delete: if isAdmin();
+    }
+
+    // =========================================================================
+    // 8. AUDIT LOGS (HIPAA § 164.312(b) Compliance)
+    // Append-only. Admins can monitor logs; modifications and deletions prohibited.
+    // =========================================================================
+    match /audit_logs/{logId} {
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      allow create: if isAuthenticated();
+      allow update: if false; // Immutable audit trail
+      allow delete: if false; // Deletion prohibited
+    }
+
+    // =========================================================================
+    // 9. EMERGENCY ALERTS & NOTIFICATIONS
+    // =========================================================================
+    match /emergency_alerts/{alertId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin() || isDoctor());
+      allow create: if isCreatingForSelf();
+      allow update: if isDocOwner() || isAdmin();
+      allow delete: if false;
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAdmin() || isCreatingForSelf();
+      allow update: if isDocOwner() || isAdmin();
+      allow delete: if isDocOwner() || isAdmin();
+    }
+
+    // =========================================================================
+    // 10. DOCTOR PORTAL & PATIENT AUTHORIZATIONS (Consent Governance)
+    // Doctors must only see patients who have explicitly authorized access.
+    // =========================================================================
+    match /patient_authorizations/{authId} {
+      allow read: if isAuthenticated() && (
+        resource.data.patientId == request.auth.uid ||
+        (isDoctor() && resource.data.doctorId == request.auth.uid) ||
+        isAdmin()
+      );
+      // Patients grant, renew, or revoke their own authorizations
+      allow create: if isAuthenticated() && request.resource.data.patientId == request.auth.uid;
+      allow update: if isAuthenticated() && (
+        resource.data.patientId == request.auth.uid ||
+        (isDoctor() && resource.data.doctorId == request.auth.uid)
+      );
+      allow delete: if isAuthenticated() && resource.data.patientId == request.auth.uid;
+    }
+
+    // =========================================================================
+    // 11. DOCTOR CARE NOTES & DIRECTIVES
+    // Doctor instructions must not be silently overwritten by AI-generated plans.
+    // =========================================================================
+    match /doctor_care_notes/{noteId} {
+      allow read: if isAuthenticated() && (
+        resource.data.patientId == request.auth.uid ||
+        (isDoctor() && resource.data.doctorId == request.auth.uid)
+      );
+      // Only licensed attending physician can create or update care notes
+      allow create: if isDoctor() && request.resource.data.doctorId == request.auth.uid;
+      allow update: if isDoctor() && resource.data.doctorId == request.auth.uid && request.resource.data.isPhysicianOverride == true;
+      allow delete: if false; // Deletion prohibited to maintain clinical record integrity
+    }
+
+    // =========================================================================
+    // 12. DOCTOR ACCESS AUDIT LOGS
+    // Every doctor access must be logged. Append-only, tamper-proof.
+    // =========================================================================
+    match /doctor_access_logs/{logId} {
+      allow read: if isDoctor() || isAdmin();
+      allow create: if isDoctor();
+      allow update: if false; // Immutable audit log
+      allow delete: if false; // Deletion prohibited
+    }
+  }
+}

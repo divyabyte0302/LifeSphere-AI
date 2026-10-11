@@ -1,0 +1,6 @@
+{
+  "name": "LifeSphere AI - Health & Environmental Intelligence",
+  "description": "LifeSphere AI-X — Academic prototype preventive health and environmental intelligence platform using machine learning, wearable IoT, and health-environment fusion.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

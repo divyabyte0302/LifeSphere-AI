@@ -1,0 +1,32 @@
+class AppRoutes {
+  static const String initial = '/';
+  static const String splash = '/splash';
+  static const String onboarding = '/onboarding';
+  static const String login = '/login';
+  static const String registration = '/registration';
+  static const String forgotPassword = '/forgot-password';
+  static const String profile = '/profile';
+  static const String consent = '/consent';
+  static const String dashboard = '/dashboard';
+  static const String measurements = '/measurements';
+  static const String wearable = '/wearable';
+  static const String medicalRecords = '/medical-records';
+  static const String reports = '/reports';
+  static const String medications = '/medications';
+  static const String lifestyle = '/lifestyle';
+  static const String environment = '/environment';
+  static const String trends = '/trends';
+  static const String aiInsights = '/ai-insights';
+  static const String recommendations = '/recommendations';
+  static const String checkup = '/checkup';
+  static const String postCheckup = '/post-checkup';
+  static const String checkupComparison = '/checkup-comparison';
+  static const String healthPlan = '/health-plan';
+  static const String dietPlan = '/diet-plan';
+  static const String notifications = '/notifications';
+  static const String emergency = '/emergency';
+  static const String privacy = '/privacy';
+  static const String dataExport = '/data-export';
+  static const String accountDeletion = '/account-deletion';
+  static const String logout = '/logout';
+}
