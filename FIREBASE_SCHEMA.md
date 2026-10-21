@@ -52,6 +52,23 @@ Primary user account profile, clinical demographics, and emergency contacts.
   - `createdAt` (timestamp, server): Account initialization time.
   - `updatedAt` (timestamp, server): Last profile edit.
 
+#### Subcollection: `users/{userId}/hydration/{recordId}`
+Daily fluid and water intake records dynamically correlated with heat, humidity, and vitals.
+- **Document ID**: `{recordId}` (e.g., `hydro-1729352400000-abc12`)
+- **Fields**:
+  - `id` (string, required): Record identifier.
+  - `userId` (string, required): User UID (`request.auth.uid == userId`).
+  - `volumeMl` (number, required): Nominal liquid volume ingested in milliliters.
+  - `effectiveMl` (number, required): Net hydration value computed using beverage coefficient.
+  - `beverageType` (string, required): "water" | "electrolyte" | "coconut_water" | "herbal_tea" | "juice" | "coffee".
+  - `source` (string): "quick_preset" | "custom_entry" | "wearable_prompt".
+  - `notes` (string, optional): Contextual notes or vessel description.
+  - `timestamp` (string, ISO 8601): Log recorded timestamp.
+  - `timeFormatted` (string): Human readable time (e.g., "09:30 AM").
+  - `createdAt` (string, ISO 8601): UTC creation timestamp.
+- **Security Rule**: `allow read: if isOwner(userId) || isAuthorizedDoctor(); allow create, update, delete: if isOwner(userId);`
+
+
 ### 2. `consents`
 Granular user consent directives for HIPAA/GDPR compliance.
 - **Document ID**: `{consentId}` (e.g., `{userId}_consent`)

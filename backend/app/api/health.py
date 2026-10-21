@@ -17,6 +17,8 @@ from app.schemas import (
     HealthMeasurementCreate,
     HealthMeasurement,
     HealthSummaryResponse,
+    HydrationEntryCreate,
+    HydrationEntry,
 )
 from app.services.firestore_service import firestore_service
 
@@ -124,3 +126,49 @@ async def get_health_summary(
         max_heart_rate_24h=max_hr,
         recent_trend=trend,
     )
+
+
+@router.post(
+    "/hydration",
+    response_model=HydrationEntry,
+    status_code=status.HTTP_201_CREATED,
+    summary="Record Daily Water Intake to users/{uid}/hydration/{recordId}",
+)
+async def create_hydration_entry(
+    payload: HydrationEntryCreate,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+):
+    """Store daily water and fluid intake entry in Firestore users/{uid}/hydration/{recordId}."""
+    uid = current_user["uid"]
+    saved = await firestore_service.save_hydration_entry(uid, payload.model_dump())
+    return HydrationEntry(**saved)
+
+
+@router.get(
+    "/hydration",
+    response_model=List[HydrationEntry],
+    summary="Get User Hydration Entries from Firestore",
+)
+async def get_hydration_entries(
+    limit: int = Query(default=50, ge=1, le=200),
+    current_user: Dict[str, Any] = Depends(get_current_user),
+):
+    """Retrieve logged hydration entries from users/{uid}/hydration for authenticated user."""
+    uid = current_user["uid"]
+    records = await firestore_service.get_hydration_entries(uid, limit=limit)
+    return [HydrationEntry(**r) for r in records]
+
+
+@router.delete(
+    "/hydration/{record_id}",
+    summary="Delete Hydration Entry from Firestore",
+)
+async def delete_hydration_entry(
+    record_id: str,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+):
+    """Delete entry from users/{uid}/hydration/{recordId}."""
+    uid = current_user["uid"]
+    success = await firestore_service.delete_hydration_entry(uid, record_id)
+    return {"status": "success" if success else "failed", "record_id": record_id}
+

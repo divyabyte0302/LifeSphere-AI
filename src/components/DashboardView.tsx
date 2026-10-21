@@ -27,7 +27,8 @@ import {
   Plus,
   Info
 } from 'lucide-react';
-import { HealthMetrics, EnvironmentalData, Recommendation, ScreenModule, Medication } from '../types';
+import { HealthMetrics, EnvironmentalData, Recommendation, ScreenModule, Medication, UserProfile } from '../types';
+import { HydrationCard } from './hydration/HydrationCard';
 
 interface DashboardViewProps {
   vitals: HealthMetrics;
@@ -38,6 +39,7 @@ interface DashboardViewProps {
   onRefresh: () => Promise<void>;
   isRefreshing: boolean;
   isMobile?: boolean;
+  user?: UserProfile;
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
@@ -49,6 +51,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onRefresh,
   isRefreshing,
   isMobile = false,
+  user,
 }) => {
   // Test states for Loading, Empty, and Error
   const [viewState, setViewState] = useState<'normal' | 'loading' | 'empty' | 'error'>('normal');
@@ -392,6 +395,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <span className="text-[10px] text-emerald-400 block mt-1">Afebrile</span>
           </div>
         </div>
+      </section>
+
+      {/* Hydration Intelligence & Dynamic Target */}
+      <section>
+        <HydrationCard
+          user={user}
+          vitals={vitals}
+          environment={environment}
+          onNavigateToHydration={() => setScreen('hydration')}
+        />
       </section>
 
       {/* 4. Environmental Exposure & 5. Health Trends (Two Column Layout) */}

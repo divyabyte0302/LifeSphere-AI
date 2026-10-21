@@ -149,6 +149,27 @@ class HealthSummaryResponse(BaseModel):
 
 
 # ============================================================================
+# Hydration Entry Schemas (users/{uid}/hydration/{recordId})
+# ============================================================================
+
+class HydrationEntryCreate(BaseModel):
+    volume_ml: float = Field(gt=0, le=5000, description="Intake volume in milliliters")
+    effective_ml: Optional[float] = Field(default=None, ge=0, le=6000)
+    beverage_type: str = Field(default="water", max_length=64)
+    source: Optional[str] = Field(default="quick_preset", max_length=64)
+    notes: Optional[str] = Field(default=None, max_length=512)
+    timestamp: Optional[datetime] = Field(default_factory=lambda: datetime.now(timezone.utc))
+    time_formatted: Optional[str] = Field(default=None, max_length=32)
+
+
+class HydrationEntry(HydrationEntryCreate):
+    id: str
+    user_id: str
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+
+# ============================================================================
 # Environmental Observations Schemas
 # ============================================================================
 

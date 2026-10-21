@@ -69,6 +69,7 @@ export const AndroidFrame: React.FC<AndroidFrameProps> = ({
     community_hazards: 'Community Hazards',
     city_analytics: 'City Analytics',
     audit_logs: 'Audit Logs',
+    hydration: 'Hydration Tracker',
   };
 
   const allModulesList: { id: ScreenModule; label: string; group: string }[] = [
@@ -80,6 +81,7 @@ export const AndroidFrame: React.FC<AndroidFrameProps> = ({
     { id: 'profile', label: '6. User Profile', group: 'Clinical & Bio' },
     { id: 'consent', label: '7. Consent Management', group: 'Privacy & Security' },
     { id: 'dashboard', label: '8. Health Dashboard', group: 'Core' },
+    { id: 'hydration', label: 'Hydration Tracker', group: 'Clinical & Bio' },
     { id: 'measurements', label: '9. Health Measurements', group: 'Clinical & Bio' },
     { id: 'wearable', label: '10. Wearable Data', group: 'Clinical & Bio' },
     { id: 'medical_records', label: '11. Medical Records', group: 'Clinical & Bio' },

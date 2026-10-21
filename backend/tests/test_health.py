@@ -139,3 +139,54 @@ async def test_health_summary_calculation():
         assert data["total_measurements"] >= 2
         assert data["average_heart_rate_24h"] == 75.0
         assert data["min_spo2_24h"] == 96.0
+
+
+@pytest.mark.asyncio
+async def test_hydration_persistence_and_isolation():
+    """Verify daily water intake entries are saved to users/{uid}/hydration and isolated between users."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        user_a_headers = {"Authorization": "Bearer mock-token-patientA"}
+        user_b_headers = {"Authorization": "Bearer mock-token-patientB"}
+
+        # 1. User A logs 350ml water
+        payload_a = {
+            "volume_ml": 350,
+            "effective_ml": 350,
+            "beverage_type": "water",
+            "source": "quick_preset",
+            "notes": "Morning glass",
+        }
+        res_a = await client.post("/api/health/hydration", json=payload_a, headers=user_a_headers)
+        assert res_a.status_code == 201
+        entry_a = res_a.json()
+        assert entry_a["user_id"] == "patientA"
+        assert entry_a["volume_ml"] == 350
+        assert "id" in entry_a
+
+        # 2. User B logs 500ml electrolyte
+        payload_b = {
+            "volume_ml": 500,
+            "effective_ml": 550,
+            "beverage_type": "electrolyte",
+            "source": "custom_entry",
+            "notes": "Post workout recovery",
+        }
+        res_b = await client.post("/api/health/hydration", json=payload_b, headers=user_b_headers)
+        assert res_b.status_code == 201
+        entry_b = res_b.json()
+        assert entry_b["user_id"] == "patientB"
+
+        # 3. User A queries hydration entries - only sees User A's logs
+        list_a = await client.get("/api/health/hydration", headers=user_a_headers)
+        assert list_a.status_code == 200
+        items_a = list_a.json()
+        assert any(item["id"] == entry_a["id"] for item in items_a)
+        assert all(item["user_id"] == "patientA" for item in items_a)
+        assert not any(item["id"] == entry_b["id"] for item in items_a)
+
+        # 4. User A deletes entry
+        del_res = await client.delete(f"/api/health/hydration/{entry_a['id']}", headers=user_a_headers)
+        assert del_res.status_code == 200
+        assert del_res.json()["status"] == "success"
+

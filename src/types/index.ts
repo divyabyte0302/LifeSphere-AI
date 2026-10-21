@@ -151,12 +151,15 @@ export type ScreenModule =
   | 'notifications'
   | 'emergency'
   | 'city_analytics'
+  | 'hydration'
   | 'privacy'
   | 'audit_logs'
   | 'data_export'
   | 'account_deletion'
   | 'logout'
   | 'settings';
+
+export * from './hydration';
 
 // Alias for backward compatibility
 export type ScreenTab = ScreenModule;

@@ -25,6 +25,7 @@ logger = logging.getLogger("lifesphere.firestore")
 _in_memory_db: Dict[str, Dict[str, Any]] = {
     "users": {},
     "measurements": {},
+    "hydration": {},
     "predictions": {},
     "alerts": {},
     "environment_observations": {},
@@ -80,7 +81,7 @@ class FirestoreService:
         """Completely purge user profile and all associated subcollection documents."""
         # Clean in-memory store
         _in_memory_db["users"].pop(uid, None)
-        for collection_key in ["measurements", "predictions", "alerts"]:
+        for collection_key in ["measurements", "hydration", "predictions", "alerts"]:
             if uid in _in_memory_db[collection_key]:
                 _in_memory_db[collection_key].pop(uid, None)
 
@@ -90,7 +91,7 @@ class FirestoreService:
         try:
             user_ref = self._db.collection("users").document(uid)
             # Delete subcollection documents
-            for subcol_name in ["measurements", "predictions", "alerts", "environmentObservations"]:
+            for subcol_name in ["measurements", "hydration", "predictions", "alerts", "environmentObservations"]:
                 subcol_ref = user_ref.collection(subcol_name)
                 docs = subcol_ref.limit(100).stream()
                 for doc in docs:
@@ -162,6 +163,85 @@ class FirestoreService:
             logger.warning(f"Firestore get_measurements fallback to in-memory: {e}")
             user_measurements = _in_memory_db["measurements"].get(uid, [])
             return user_measurements[:limit]
+
+    # ------------------------------------------------------------------------
+    # Daily Water Intake & Hydration Operations (users/{uid}/hydration/{recordId})
+    # ------------------------------------------------------------------------
+    async def save_hydration_entry(self, uid: str, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Save a new hydration intake record in users/{uid}/hydration/{recordId}."""
+        entry_id = data.get("id") or f"hydro-{uuid.uuid4().hex[:12]}"
+        now_iso = datetime.now(timezone.utc).isoformat()
+        record = {
+            **data,
+            "id": entry_id,
+            "user_id": uid,
+            "created_at": now_iso,
+        }
+
+        if isinstance(record.get("timestamp"), datetime):
+            record["timestamp"] = record["timestamp"].isoformat()
+        elif "timestamp" not in record or not record["timestamp"]:
+            record["timestamp"] = now_iso
+
+        if is_mock_mode() or self._db is None:
+            if uid not in _in_memory_db["hydration"]:
+                _in_memory_db["hydration"][uid] = []
+            _in_memory_db["hydration"][uid].insert(0, record)
+            return record
+
+        try:
+            doc_ref = (
+                self._db.collection("users")
+                .document(uid)
+                .collection("hydration")
+                .document(entry_id)
+            )
+            doc_ref.set(record)
+            return record
+        except Exception as e:
+            logger.error(f"Firestore save_hydration_entry error: {e}")
+            if uid not in _in_memory_db["hydration"]:
+                _in_memory_db["hydration"][uid] = []
+            _in_memory_db["hydration"][uid].insert(0, record)
+            return record
+
+    async def get_hydration_entries(self, uid: str, limit: int = 50) -> List[Dict[str, Any]]:
+        """Retrieve hydration intake history for authenticated user UID only."""
+        if is_mock_mode() or self._db is None:
+            user_entries = _in_memory_db["hydration"].get(uid, [])
+            return user_entries[:limit]
+
+        try:
+            subcol_ref = (
+                self._db.collection("users")
+                .document(uid)
+                .collection("hydration")
+                .order_by("created_at", direction="DESCENDING")
+                .limit(limit)
+            )
+            docs = subcol_ref.stream()
+            return [doc.to_dict() for doc in docs]
+        except Exception as e:
+            logger.warning(f"Firestore get_hydration_entries fallback to in-memory: {e}")
+            user_entries = _in_memory_db["hydration"].get(uid, [])
+            return user_entries[:limit]
+
+    async def delete_hydration_entry(self, uid: str, record_id: str) -> bool:
+        """Delete a hydration intake record from users/{uid}/hydration/{recordId}."""
+        if uid in _in_memory_db["hydration"]:
+            _in_memory_db["hydration"][uid] = [
+                entry for entry in _in_memory_db["hydration"][uid] if entry.get("id") != record_id
+            ]
+
+        if is_mock_mode() or self._db is None:
+            return True
+
+        try:
+            self._db.collection("users").document(uid).collection("hydration").document(record_id).delete()
+            return True
+        except Exception as e:
+            logger.error(f"Firestore delete_hydration_entry error for {uid}/{record_id}: {e}")
+            return False
 
     # ------------------------------------------------------------------------
     # Risk Predictions Operations (users/{uid}/predictions/{predictionId})

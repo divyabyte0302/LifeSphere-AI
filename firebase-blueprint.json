@@ -125,12 +125,34 @@
         "clientIp": { "type": "string", "maxLength": 64 }
       },
       "required": ["id", "doctorId", "patientId", "accessedFeature", "timestamp", "purposeOfAccess"]
+    },
+    "HydrationRecord": {
+      "title": "Daily Water Intake & Hydration Entry",
+      "description": "User logged fluid intake entries with volume, beverage type, effective hydration, and timestamps.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "volumeMl": { "type": "number" },
+        "effectiveMl": { "type": "number" },
+        "beverageType": { "type": "string", "maxLength": 64 },
+        "source": { "type": "string", "maxLength": 64 },
+        "notes": { "type": "string", "maxLength": 512 },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "timeFormatted": { "type": "string", "maxLength": 32 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "volumeMl", "effectiveMl", "beverageType", "timestamp"]
     }
   },
   "firestore": {
     "/users/{userId}": {
       "schema": "#/entities/User",
       "description": "User profiles and RBAC role assignments."
+    },
+    "/users/{userId}/hydration/{recordId}": {
+      "schema": "#/entities/HydrationRecord",
+      "description": "Daily water intake entries and dynamic fluid tracking per user."
     },
     "/medical_records/{recordId}": {
       "schema": "#/entities/MedicalRecord",

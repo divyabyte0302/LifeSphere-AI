@@ -12,12 +12,14 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { HealthMetrics, MeasurementRecord } from '../../types';
+import { HydrationCard } from '../hydration/HydrationCard';
 
 interface MeasurementsScreenProps {
   vitals: HealthMetrics;
   onLogMeasurement: (record: MeasurementRecord) => void;
   showSnackbar: (msg: string) => void;
   isMobile?: boolean;
+  onNavigateToHydration?: () => void;
 }
 
 export const MeasurementsScreen: React.FC<MeasurementsScreenProps> = ({
@@ -25,6 +27,7 @@ export const MeasurementsScreen: React.FC<MeasurementsScreenProps> = ({
   onLogMeasurement,
   showSnackbar,
   isMobile,
+  onNavigateToHydration,
 }) => {
   const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(false);
   const [selectedType, setSelectedType] = useState<MeasurementRecord['type']>('Heart Rate');
@@ -111,6 +114,13 @@ export const MeasurementsScreen: React.FC<MeasurementsScreenProps> = ({
           <span>Log Measurement</span>
         </button>
       </div>
+
+      {/* Hydration Intelligence Widget */}
+      <HydrationCard
+        vitals={vitals}
+        onNavigateToHydration={onNavigateToHydration}
+        onQuickLogSuccess={showSnackbar}
+      />
 
       {/* Filter Tabs */}
       <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">

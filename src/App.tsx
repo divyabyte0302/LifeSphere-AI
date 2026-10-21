@@ -25,6 +25,7 @@ import { LifeRiskScoreView } from './components/views/LifeRiskScoreView';
 import { SafeRoutesView } from './components/views/SafeRoutesView';
 import { CommunityHazardsView } from './components/views/CommunityHazardsView';
 import { CityAnalyticsView } from './components/views/CityAnalyticsView';
+import { HydrationTrackerView } from './components/views/HydrationTrackerView';
 
 // Secure Admin Web Portal Components
 import { AdminLayout } from './components/admin/AdminLayout';
@@ -415,6 +416,7 @@ export default function App() {
             onRefresh={handleRefresh}
             isRefreshing={isRefreshing}
             isMobile={isMobileLayout}
+            user={user}
           />
         );
 
@@ -439,6 +441,17 @@ export default function App() {
       case 'city_analytics':
         return <CityAnalyticsView isMobile={isMobileLayout} />;
 
+      case 'hydration':
+        return (
+          <HydrationTrackerView
+            user={user}
+            vitals={vitals}
+            environment={environment}
+            onNavigate={setModule}
+            showSnackbar={showSnackbar}
+          />
+        );
+
       case 'measurements':
         return (
           <MeasurementsScreen
@@ -446,6 +459,7 @@ export default function App() {
             onLogMeasurement={handleLogMeasurement}
             showSnackbar={showSnackbar}
             isMobile={isMobileLayout}
+            onNavigateToHydration={() => setModule('hydration')}
           />
         );
 

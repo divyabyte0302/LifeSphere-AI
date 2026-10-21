@@ -51,6 +51,12 @@ service cloud.firestore {
       allow create: if isOwner(userId);
       allow update: if isOwner(userId) || isAdmin();
       allow delete: if isAdmin();
+
+      // Scoped user hydration intake logs: users/{uid}/hydration/{recordId}
+      match /hydration/{recordId} {
+        allow read: if isOwner(userId) || (isDoctor() && exists(/databases/$(database)/documents/patient_authorizations/$(request.auth.uid + '_' + userId)));
+        allow create, update, delete: if isOwner(userId);
+      }
     }
 
     // =========================================================================

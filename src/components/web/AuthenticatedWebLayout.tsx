@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import {
   Activity,
+  Droplets,
   Search,
   Bell,
   User,
@@ -67,6 +68,7 @@ export const AuthenticatedWebLayout: React.FC<AuthenticatedWebLayoutProps> = ({
     { id: 'dashboard', label: '1. Main Dashboard', icon: <LayoutDashboard className="w-4 h-4 text-emerald-400" />, category: 'Core' },
     { id: 'digital_twin', label: '2. AI Digital Twin', icon: <Cpu className="w-4 h-4 text-cyan-400" />, category: 'Core' },
     { id: 'measurements', label: '3. Health Overview', icon: <HeartPulse className="w-4 h-4 text-rose-400" />, category: 'Core' },
+    { id: 'hydration', label: 'Hydration Tracker', icon: <Droplets className="w-4 h-4 text-cyan-400" />, category: 'Core' },
     { id: 'medical_records', label: '4. Medical Records', icon: <FolderOpen className="w-4 h-4 text-purple-400" />, category: 'Core' },
     { id: 'wearable', label: '5. Wearables & IoT', icon: <Watch className="w-4 h-4 text-cyan-400" />, category: 'Sensors' },
     { id: 'environment', label: '6. Environment', icon: <CloudSun className="w-4 h-4 text-amber-400" />, category: 'Sensors' },

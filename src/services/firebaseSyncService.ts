@@ -712,6 +712,28 @@ class FirebaseSyncManager {
     this.notifyAudit();
   }
 
+  public syncHydrationLog(entry: {
+    id: string;
+    volumeMl: number;
+    effectiveMl: number;
+    beverageType: string;
+    timestamp: string;
+    userId?: string;
+  }): void {
+    const uid = entry.userId || sharedFirebaseConfig.activeUserId || 'LS-8842';
+    this.logSyncAction({
+      action: 'SYNC_TELEMETRY',
+      originDevice: 'web',
+      targetDevice: 'android',
+      collection: `users/${uid}/hydration`,
+      documentId: entry.id,
+      details: `Persisted ${entry.volumeMl}ml ${entry.beverageType} (${entry.effectiveMl}ml effective) to users/${uid}/hydration/${entry.id}.`,
+      version: 1,
+      payloadHash: `hash_hydro_${entry.id}`,
+      latencyMs: 14,
+    });
+  }
+
   public getFormattedLastSync(): string {
     const now = new Date();
     const diffSecs = Math.round((now.getTime() - this.lastSynchronizedAt.getTime()) / 1000);
