@@ -65,12 +65,20 @@ export const CheckupScreens: React.FC<CheckupScreensProps> = ({
             </div>
           </div>
 
-          <button
-            onClick={() => setScreen('dashboard')}
-            className="text-xs text-emerald-400 hover:text-emerald-300 font-semibold"
-          >
-            Back to Dashboard
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setScreen('checkup_calendar')}
+              className="text-xs bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 border border-blue-500/30 px-3 py-1.5 rounded-lg font-bold transition-colors"
+            >
+              Open Checkup Calendar
+            </button>
+            <button
+              onClick={() => setScreen('dashboard')}
+              className="text-xs text-emerald-400 hover:text-emerald-300 font-semibold"
+            >
+              Back to Dashboard
+            </button>
+          </div>
         </div>
 
         {/* Comparison Table Card */}

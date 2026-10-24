@@ -70,6 +70,8 @@ export const AndroidFrame: React.FC<AndroidFrameProps> = ({
     city_analytics: 'City Analytics',
     audit_logs: 'Audit Logs',
     hydration: 'Hydration Tracker',
+    checkup_calendar: 'Monthly Checkup Calendar',
+    health_analytics: 'Health Analytics & Charts',
   };
 
   const allModulesList: { id: ScreenModule; label: string; group: string }[] = [

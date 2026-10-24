@@ -16,6 +16,14 @@ export interface HealthMetrics {
   remSleepHours: number;
   stepCount: number;
   activeCalories: number;
+  steps?: number;
+  caloriesBurned?: number;
+  hydrationLevel?: number;
+  environmentalSensitivityScore?: number;
+  deepSleepMinutes?: number;
+  remSleepMinutes?: number;
+  lightSleepMinutes?: number;
+  activeMinutes?: number;
 }
 
 export interface EnvironmentalData {
@@ -27,12 +35,19 @@ export interface EnvironmentalData {
   ozone: number; // ppb
   uvIndex: number;
   uvCategory: 'Low' | 'Moderate' | 'High' | 'Very High' | 'Extreme';
-  pollenCount: number; // grains/m³
-  pollenCategory: 'Low' | 'Medium' | 'High';
+  pollenCount: number | string; // grains/m³ or string category
+  pollenCategory?: 'Low' | 'Medium' | 'High';
   temperature: number; // °C
   humidity: number; // %
-  noiseDecibels: number; // dB
-  atmosphericPressure: number; // hPa
+  noiseDecibels?: number; // dB
+  atmosphericPressure?: number; // hPa
+  aqi?: number;
+  cautionLevel?: string;
+  heatIndex?: number;
+  no2?: number;
+  so2?: number;
+  co?: number;
+  primaryPollutant?: string;
 }
 
 export interface Medication {
@@ -146,6 +161,8 @@ export type ScreenModule =
   | 'checkup'
   | 'post_checkup'
   | 'checkup_comparison'
+  | 'checkup_calendar'
+  | 'health_analytics'
   | 'health_plan'
   | 'diet_plan'
   | 'notifications'
@@ -386,3 +403,238 @@ export interface EmergencyAuditLog {
   details: string;
   clientPlatform: 'Web SaaS' | 'Android Mobile';
 }
+
+// ============================================================================
+// Module 2: Emergency Detection and Response Types
+// ============================================================================
+
+export type EmergencyRelationship =
+  | 'Spouse'
+  | 'Parent'
+  | 'Child'
+  | 'Sibling'
+  | 'Friend'
+  | 'Physician'
+  | 'Caregiver'
+  | 'Other';
+
+export interface EmergencyContact {
+  id: string;
+  userId: string;
+  name: string;
+  relationship: EmergencyRelationship;
+  phone: string;
+  email?: string;
+  isPrimary: boolean;
+  notificationPreferences: {
+    push: boolean;
+    sms: boolean;
+    inApp: boolean;
+  };
+  hasExplicitConsent: boolean;
+  consentGrantedAt?: string;
+  createdAt: string;
+}
+
+export type AlertSeverity = 'low' | 'moderate' | 'high' | 'critical';
+
+export interface EmergencyAlertRule {
+  id: string;
+  userId: string;
+  name: string;
+  metric: 'heart_rate' | 'spo2' | 'blood_pressure_systolic' | 'blood_pressure_diastolic' | 'pm25' | 'heat_index';
+  condition: 'greater_than' | 'less_than';
+  threshold: number;
+  secondaryMetric?: string;
+  secondaryThreshold?: number;
+  durationSeconds: number;
+  severity: AlertSeverity;
+  isEnabled: boolean;
+  rejectInvalidReadings: boolean;
+  maxReadingAgeMinutes: number;
+}
+
+export type EmergencyEventStatus = 'active' | 'acknowledged' | 'escalated' | 'resolved' | 'cancelled';
+
+export interface EmergencyNotificationDeliveryReceipt {
+  contactId: string;
+  contactName: string;
+  channel: 'browser_push' | 'sms' | 'in_app';
+  status: 'sent' | 'delivered' | 'acknowledged' | 'failed';
+  timestamp: string;
+  failureReason?: string;
+  latencyMs?: number;
+}
+
+export interface EmergencyEventRecord {
+  id: string;
+  userId: string;
+  triggerType: 'MANUAL_SOS' | 'AUTOMATED_RULE_TRIGGER';
+  ruleId?: string;
+  title: string;
+  severity: AlertSeverity;
+  reason: string;
+  vitalsSnapshot: {
+    heartRate?: number;
+    spO2?: number;
+    bloodPressure?: string;
+    temperature?: number;
+    respiratoryRate?: number;
+    readingTimestamp?: string;
+  };
+  environmentSnapshot: {
+    aqi?: number;
+    pm25?: number;
+    temperature?: number;
+  };
+  location?: {
+    latitude: number;
+    longitude: number;
+    accuracyMeters?: number;
+    address?: string;
+    isConsented: boolean;
+  };
+  triggeredAt: string;
+  userConfirmed: boolean;
+  confirmedAt?: string;
+  cancelledAt?: string;
+  status: EmergencyEventStatus;
+  notificationsDispatched: EmergencyNotificationDeliveryReceipt[];
+  ambulanceAction: {
+    dialed: boolean;
+    number: string;
+    dialTimestamp?: string;
+    userConfirmationRequired: boolean;
+    status: 'ready_to_call' | 'dialer_launched' | 'manual_confirmation_advised';
+  };
+  escalationTimeoutSeconds: number;
+  escalatedAt?: string;
+  acknowledgements: Array<{
+    acknowledgedBy: string;
+    acknowledgedAt: string;
+    notes?: string;
+  }>;
+  dataQualityChecks: {
+    passed: boolean;
+    issues: string[];
+    readingTimestampIso?: string;
+    sensorAgeMinutes?: number;
+  };
+}
+
+// ============================================================================
+// Module 1: Health Appointment and Recurring Reminders Types
+// ============================================================================
+
+export type AppointmentCategory =
+  | 'routine_checkup'
+  | 'cardiology'
+  | 'pulmonology'
+  | 'allergy_immunology'
+  | 'annual_physical'
+  | 'lab_work'
+  | 'telehealth';
+
+export type AppointmentStatus = 'scheduled' | 'completed' | 'cancelled' | 'missed';
+export type ReminderFrequency = 'once' | 'monthly' | 'quarterly' | 'annual';
+export type NotificationDeliveryStatus = 'scheduled' | 'delivered' | 'dismissed' | 'failed';
+
+export interface ReminderPreferences {
+  leadTimeHours: number; // e.g. 1, 2, 24, 48
+  pushEnabled: boolean;
+  emailEnabled: boolean;
+  inAppEnabled: boolean;
+}
+
+export interface Appointment {
+  id: string;
+  userId: string;
+  title: string;
+  description?: string;
+  doctorOrSpecialist: string;
+  category: AppointmentCategory;
+  scheduledDateTime: string; // ISO UTC string
+  durationMinutes: number;
+  status: AppointmentStatus;
+  frequency: ReminderFrequency;
+  nextRecurrenceDate?: string;
+  parentAppointmentId?: string;
+  recurrenceCycle?: number;
+  location?: string;
+  isTelehealth: boolean;
+  telehealthLink?: string;
+  reminderPreferences: ReminderPreferences;
+  notificationDeliveryStatus: NotificationDeliveryStatus;
+  deliveryTimestamp?: string;
+  notes?: string;
+  completedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ReminderDeliveryLog {
+  id: string;
+  appointmentId: string;
+  appointmentTitle: string;
+  channel: 'browser_push' | 'in_app' | 'email';
+  status: 'delivered' | 'scheduled' | 'failed';
+  failureReason?: string;
+  timestamp: string;
+  leadTimeHours: number;
+}
+
+// ============================================================================
+// Module 6: Health Analytics & Longitudinal Biomarker Charts Types
+// ============================================================================
+
+export type BiomarkerType =
+  | 'heart_rate'
+  | 'blood_pressure'
+  | 'spo2'
+  | 'sleep'
+  | 'temperature'
+  | 'steps'
+  | 'aqi_exposure'
+  | 'risk_score';
+
+export type AnalyticsTimeHorizon = 'daily' | 'weekly' | 'monthly';
+
+export interface BiomarkerTrendPoint {
+  timestamp: string;
+  metricType: BiomarkerType;
+  value: number;
+  secondaryValue?: number; // e.g. diastolic BP or deep sleep
+  unit: string;
+  siteOrStage?: string;
+  isInterpolated?: boolean;
+  isMissing?: boolean;
+  qualityScore?: number; // 0-100%
+  source?: string;
+}
+
+export interface BiomarkerSummaryCard {
+  metricType: BiomarkerType;
+  label: string;
+  currentValue: number;
+  secondaryCurrent?: number;
+  unit: string;
+  averageValue: number;
+  minValue: number;
+  maxValue: number;
+  trendDirection: 'improving' | 'declining' | 'stable';
+  percentageChange: number;
+  clinicalEvaluation: string;
+  thresholdBand: string;
+}
+
+export interface ValidationChecklistItem {
+  id: string;
+  title: string;
+  requirement: string;
+  status: 'passed' | 'warning' | 'pending';
+  summary: string;
+  technicalDetails: string;
+  verifiedAt: string;
+}
+
+

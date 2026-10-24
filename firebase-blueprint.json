@@ -143,6 +143,102 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "userId", "volumeMl", "effectiveMl", "beverageType", "timestamp"]
+    },
+    "Appointment": {
+      "title": "Health Checkup Appointment & Recurring Reminder",
+      "description": "Patient health appointments with monthly recurring reminder support, delivery confirmation tracking, and timezone compliance.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 256 },
+        "description": { "type": "string", "maxLength": 1024 },
+        "doctorOrSpecialist": { "type": "string", "maxLength": 128 },
+        "category": { "type": "string", "enum": ["routine_checkup", "cardiology", "pulmonology", "allergy_immunology", "annual_physical", "lab_work", "telehealth"] },
+        "scheduledDateTime": { "type": "string", "format": "date-time" },
+        "durationMinutes": { "type": "integer" },
+        "status": { "type": "string", "enum": ["scheduled", "completed", "cancelled", "missed"] },
+        "frequency": { "type": "string", "enum": ["once", "monthly", "quarterly", "annual"] },
+        "nextRecurrenceDate": { "type": "string" },
+        "location": { "type": "string", "maxLength": 256 },
+        "isTelehealth": { "type": "boolean" },
+        "telehealthLink": { "type": "string", "maxLength": 512 },
+        "reminderPreferences": { "type": "object" },
+        "notificationDeliveryStatus": { "type": "string", "enum": ["scheduled", "delivered", "dismissed", "failed"] },
+        "deliveryTimestamp": { "type": "string" },
+        "notes": { "type": "string", "maxLength": 1024 },
+        "completedAt": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "title", "scheduledDateTime", "status", "frequency", "createdAt"]
+    },
+    "HealthAnalyticsObservation": {
+      "title": "Health Analytics Biomarker Observation",
+      "description": "Longitudinal biomarker data points for heart rate, blood pressure, sleep stages, temperature, and environmental AQI correlation.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "metricType": { "type": "string", "enum": ["heart_rate", "blood_pressure", "sleep", "temperature", "steps", "aqi_exposure", "risk_score"] },
+        "value": { "type": "number" },
+        "secondaryValue": { "type": "number" },
+        "unit": { "type": "string", "maxLength": 32 },
+        "siteOrStage": { "type": "string", "maxLength": 64 },
+        "isSimulated": { "type": "boolean" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "metricType", "value", "timestamp"]
+    },
+    "EmergencyContact": {
+      "title": "Registered Emergency Contact",
+      "description": "User-registered emergency contact with relationship, contact channels, and explicit consent.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 128 },
+        "relationship": { "type": "string", "maxLength": 64 },
+        "phone": { "type": "string", "maxLength": 32 },
+        "email": { "type": "string", "maxLength": 128 },
+        "isPrimary": { "type": "boolean" },
+        "hasExplicitConsent": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "name", "relationship", "phone", "hasExplicitConsent"]
+    },
+    "EmergencyAlertRule": {
+      "title": "Emergency Alert Rule",
+      "description": "Configurable abnormal reading detection rule and threshold.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 128 },
+        "metric": { "type": "string", "maxLength": 64 },
+        "condition": { "type": "string", "enum": ["greater_than", "less_than"] },
+        "threshold": { "type": "number" },
+        "durationSeconds": { "type": "number" },
+        "severity": { "type": "string", "enum": ["low", "moderate", "high", "critical"] },
+        "isEnabled": { "type": "boolean" }
+      },
+      "required": ["id", "userId", "name", "metric", "condition", "threshold", "severity", "isEnabled"]
+    },
+    "EmergencyEventRecord": {
+      "title": "Emergency Event Record",
+      "description": "Log of manual SOS or automated emergency trigger with telemetry, notifications, and acknowledgements.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "triggerType": { "type": "string", "enum": ["MANUAL_SOS", "AUTOMATED_RULE_TRIGGER"] },
+        "title": { "type": "string", "maxLength": 256 },
+        "severity": { "type": "string", "enum": ["low", "moderate", "high", "critical"] },
+        "reason": { "type": "string", "maxLength": 1024 },
+        "status": { "type": "string", "enum": ["active", "acknowledged", "escalated", "resolved", "cancelled"] },
+        "triggeredAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "triggerType", "title", "severity", "status", "triggeredAt"]
     }
   },
   "firestore": {
@@ -153,6 +249,26 @@
     "/users/{userId}/hydration/{recordId}": {
       "schema": "#/entities/HydrationRecord",
       "description": "Daily water intake entries and dynamic fluid tracking per user."
+    },
+    "/users/{userId}/appointments/{appointmentId}": {
+      "schema": "#/entities/Appointment",
+      "description": "Health checkup appointments and monthly recurring reminders."
+    },
+    "/users/{userId}/analytics_records/{recordId}": {
+      "schema": "#/entities/HealthAnalyticsObservation",
+      "description": "Biomarker historical records and longitudinal analytics."
+    },
+    "/users/{userId}/emergency_contacts/{contactId}": {
+      "schema": "#/entities/EmergencyContact",
+      "description": "Registered emergency contacts with verified permissions."
+    },
+    "/users/{userId}/emergency_rules/{ruleId}": {
+      "schema": "#/entities/EmergencyAlertRule",
+      "description": "Configurable threshold and data-quality rules."
+    },
+    "/users/{userId}/emergency_events/{eventId}": {
+      "schema": "#/entities/EmergencyEventRecord",
+      "description": "Emergency incident audit logs with delivery acknowledgements."
     },
     "/medical_records/{recordId}": {
       "schema": "#/entities/MedicalRecord",

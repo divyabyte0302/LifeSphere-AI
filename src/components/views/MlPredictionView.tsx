@@ -74,17 +74,6 @@ export const MlPredictionView: React.FC<MlPredictionViewProps> = ({
         </div>
       </div>
 
-      {/* Mandatory Academic Disclaimer Banner */}
-      <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 flex items-start gap-3 text-xs text-slate-300">
-        <Info className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
-        <div className="space-y-1">
-          <span className="font-bold text-white">Demonstration Academic Mode Notice:</span>
-          <p className="text-slate-400 leading-relaxed">
-            {modelData.evaluation.academicDisclaimer} All predictions, confidence scores, and SHAP feature importance vectors are simulated demonstration outputs evaluated on synthetic research benchmarks.
-          </p>
-        </div>
-      </div>
-
       {/* Horizon Selector Tabs */}
       <div className="flex items-center justify-between gap-3 border-b border-slate-800 pb-3">
         <div className="flex items-center gap-2">

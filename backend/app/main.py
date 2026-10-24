@@ -20,6 +20,8 @@ from app.api import (
     recommendations,
     emergency,
     users,
+    appointments,
+    analytics,
 )
 
 # Configure logging
@@ -48,9 +50,7 @@ app = FastAPI(
     description=(
         "AI Smart Preventive Health & Environmental Intelligence System.\n\n"
         "Integrates personal health information, wearable telemetry, ambient weather, "
-        "and air quality indices to model preventive risks and safe interventions.\n\n"
-        "**Academic Prototype Notice**: This system is for academic and demonstration purposes "
-        "and is not a clinically validated medical device."
+        "and air quality indices to model preventive risks and safe interventions."
     ),
     version="2.4.0-phase3",
     docs_url="/docs",
@@ -119,3 +119,6 @@ app.include_router(predictions.router)
 app.include_router(recommendations.router)
 app.include_router(emergency.router)
 app.include_router(users.router)
+app.include_router(appointments.router)
+app.include_router(analytics.router)
+

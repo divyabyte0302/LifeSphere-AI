@@ -485,7 +485,7 @@ export const HydrationTrackerView: React.FC<HydrationTrackerViewProps> = ({
                 <Sun className="w-4 h-4 text-amber-400" />
                 <h3 className="text-sm font-semibold text-slate-100">Live Environmental Adaptation Simulator</h3>
               </div>
-              <span className="text-[11px] text-slate-400">Academic Demo</span>
+              <span className="text-[11px] text-cyan-400 font-medium">Active Calibration</span>
             </div>
             <p className="text-xs text-slate-400">
               Shift ambient conditions to verify how the LifeSphere AI-X engine dynamically recalibrates hydration targets

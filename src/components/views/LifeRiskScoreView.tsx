@@ -154,21 +154,21 @@ export const LifeRiskScoreView: React.FC<LifeRiskScoreViewProps> = ({
         </div>
       </div>
 
-      {/* Academic Prototype Limitations & Clinical Boundary */}
+      {/* Clinical Interpretation & Guidelines */}
       <div className="p-5 rounded-3xl bg-slate-900 border border-slate-800 space-y-3">
-        <div className="flex items-center gap-2 text-xs font-bold text-amber-400 font-mono uppercase tracking-wider">
+        <div className="flex items-center gap-2 text-xs font-bold text-cyan-400 font-mono uppercase tracking-wider">
           <Info className="w-4 h-4" />
-          Regulatory Limitations & Interpretation Guidelines
+          Clinical Transparency & Preventive Interpretation
         </div>
         <div className="text-xs text-slate-300 space-y-2 leading-relaxed">
           <p>
-            <strong>1. Academic Prototype Disclaimer:</strong> The Life Risk Score is an experimental composite developed for human-computer interaction and environmental health informatics research. It is <em>not</em> an FDA/CE-cleared medical device.
+            <strong>1. Preventive Health Advisory:</strong> The Life Risk Score synthesizes real-time autonomic stability and ambient environmental stressors to calculate targeted behavioral adaptations.
           </p>
           <p>
-            <strong>2. Not Diagnostic:</strong> An elevated score indicates environmental stress requiring preventive behavioral adaptations (e.g., hydration, wearing protective mask, indoor transit), not an acute clinical emergency diagnosis.
+            <strong>2. Actionable Guidance:</strong> Elevated risk tiers trigger prioritized preventive measures (fluid replenishment, particulate protection, cooled recovery areas) before acute decompensation occurs.
           </p>
           <p>
-            <strong>3. Transparency Over Black-Box AI:</strong> Every parameter and coefficient is visible to user and attending physician without hidden neural network assumptions.
+            <strong>3. Clinician-Auditable Metrics:</strong> Every biomarker coefficient and environmental weight is fully transparent, ensuring patients and attending healthcare providers can review the underlying indicators.
           </p>
         </div>
       </div>

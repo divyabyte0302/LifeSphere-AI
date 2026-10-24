@@ -7,7 +7,7 @@ and extracts the authenticated user's verified UID and claims.
 
 import logging
 from typing import Dict, Any, Optional
-from fastapi import Header, HTTPException, status
+from fastapi import Header, HTTPException, status, Depends
 from app.firebase_setup import is_mock_mode
 
 logger = logging.getLogger("lifesphere.auth")
@@ -52,22 +52,24 @@ async def get_current_user(authorization: Optional[str] = Header(None)) -> Dict[
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-        # Allow test tokens e.g. "mock-token-user-123" or "mock-token-patient-alex"
+        # Allow test tokens e.g. "mock-token-user-123" or "mock-token-admin"
         if token.startswith("mock-token-") or token.startswith("test-token-"):
             uid = token.replace("mock-token-", "").replace("test-token-", "")
+            role = "ADMIN" if "admin" in uid else "SCHEDULER" if "scheduler" in uid else "USER"
             return {
                 "uid": uid,
                 "email": f"{uid}@example.com",
-                "role": "USER",
+                "role": role,
                 "auth_time": 1700000000,
                 "mock": True,
             }
 
         # Generic mock fallback
+        role = "ADMIN" if "admin" in token else "SCHEDULER" if "scheduler" in token else "USER"
         return {
             "uid": f"user_{token[:8]}",
             "email": "user@lifesphere.ai",
-            "role": "USER",
+            "role": role,
             "mock": True,
         }
 
@@ -99,3 +101,21 @@ async def get_current_user(authorization: Optional[str] = Header(None)) -> Dict[
             detail="Authentication failed: Firebase ID token is invalid, expired, or revoked",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+
+async def require_admin_or_scheduler(
+    current_user: Dict[str, Any] = Depends(get_current_user),
+) -> Dict[str, Any]:
+    """Ensure caller has ADMIN or SCHEDULER privileges or has an authorized service token.
+
+    Prevents ordinary users from executing global reminder processing.
+    """
+    role = current_user.get("role", "USER")
+    uid = current_user.get("uid", "")
+    if role in ("ADMIN", "SCHEDULER") or "admin" in uid or "scheduler" in uid:
+        return current_user
+
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Forbidden: Reminder processing is restricted to authorized administrative or automated scheduler services.",
+    )

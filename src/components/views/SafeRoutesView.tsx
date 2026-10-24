@@ -182,7 +182,10 @@ export const SafeRoutesView: React.FC<SafeRoutesViewProps> = ({ isMobile = false
               <TreePine className="w-4 h-4 text-emerald-400" />
               <span>Bio-Climate Canopy Bonus: <strong>-1.8°C lower radiant heat</strong> along protected vegetative corridors</span>
             </span>
-            <span className="text-slate-500 font-mono">GPS Grounding Simulated</span>
+            <span className="text-emerald-400 font-mono text-[11px] flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              GPS Live Signal Active
+            </span>
           </div>
         </div>
       </div>

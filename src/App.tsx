@@ -3,6 +3,7 @@ import { Header } from './components/Header';
 import { AndroidFrame } from './components/AndroidFrame';
 import { AuthenticatedWebLayout } from './components/web/AuthenticatedWebLayout';
 import { PublicWebsite } from './components/public/PublicWebsite';
+import { AuthLoginGate, AuthenticatedSession } from './components/auth/AuthLoginGate';
 import { DashboardView } from './components/DashboardView';
 import { CheckupView } from './components/CheckupView';
 import { EnvironmentView } from './components/EnvironmentView';
@@ -26,6 +27,8 @@ import { SafeRoutesView } from './components/views/SafeRoutesView';
 import { CommunityHazardsView } from './components/views/CommunityHazardsView';
 import { CityAnalyticsView } from './components/views/CityAnalyticsView';
 import { HydrationTrackerView } from './components/views/HydrationTrackerView';
+import { CheckupCalendarView } from './components/views/CheckupCalendarView';
+import { HealthAnalyticsView } from './components/views/HealthAnalyticsView';
 
 // Secure Admin Web Portal Components
 import { AdminLayout } from './components/admin/AdminLayout';
@@ -99,6 +102,34 @@ import {
 import { CheckCircle2 } from 'lucide-react';
 
 export default function App() {
+  // Authentication and Authorization Gate State
+  const [authenticatedSession, setAuthenticatedSession] = useState<AuthenticatedSession | null>(() => {
+    const saved = localStorage.getItem('lifesphere_auth_session');
+    return saved ? JSON.parse(saved) : null;
+  });
+
+  const handleAuthenticated = (session: AuthenticatedSession) => {
+    setAuthenticatedSession(session);
+    localStorage.setItem('lifesphere_auth_session', JSON.stringify(session));
+    showSnackbar(`Successfully signed in as ${session.role} (${session.email}).`);
+
+    // Route based on credential category role
+    if (session.role === 'ADMIN') {
+      setViewMode('admin_portal');
+    } else if (session.role === 'DOCTOR') {
+      setViewMode('doctor_portal');
+    } else {
+      setViewMode('authenticated_web');
+      setModule('dashboard');
+    }
+  };
+
+  const handleLogout = () => {
+    setAuthenticatedSession(null);
+    localStorage.removeItem('lifesphere_auth_session');
+    showSnackbar('Signed out securely. Authentication required.');
+  };
+
   const [viewMode, setViewMode] = useState<ViewMode>('authenticated_web'); // Default to Desktop SaaS platform
   const [showTopHeader, setShowTopHeader] = useState(false); // Hidden from website by default per user request
   const [currentModule, setModule] = useState<ScreenModule>('dashboard');
@@ -505,7 +536,29 @@ export default function App() {
         return <EnvironmentView environment={environment} isMobile={isMobileLayout} />;
 
       case 'trends':
-        return <TrendsView isMobile={isMobileLayout} />;
+        return <TrendsView isMobile={isMobileLayout} onNavigateToAnalytics={() => setModule('health_analytics')} />;
+
+      case 'health_analytics':
+        return (
+          <HealthAnalyticsView
+            vitals={vitals}
+            environment={environment}
+            isMobile={isMobileLayout}
+            onNavigateToCalendar={() => setModule('checkup_calendar')}
+            showSnackbar={showSnackbar}
+          />
+        );
+
+      case 'checkup_calendar':
+        return (
+          <CheckupCalendarView
+            userId={user.id}
+            isMobile={isMobileLayout}
+            onNavigateToCheckupChat={() => setModule('checkup')}
+            showSnackbar={showSnackbar}
+          />
+        );
+
 
       case 'ai_insights':
         return (
@@ -725,21 +778,22 @@ export default function App() {
         />
       )}
 
-      {/* Main Viewport matching selected viewMode */}
+      {/* Main Viewport matching selected viewMode with Authentication & Authorization Gate */}
       <main className="flex-1 flex flex-col overflow-hidden">
-        {viewMode === 'public_web' ? (
+        {!authenticatedSession ? (
+          <div className="flex-1 overflow-y-auto">
+            <AuthLoginGate
+              onAuthenticated={handleAuthenticated}
+              onExplorePublicWebsite={() => setViewMode('public_web')}
+            />
+          </div>
+        ) : viewMode === 'public_web' ? (
           // 1. Public Marketing SaaS Website (18 Comprehensive Sections)
           <div className="flex-1 overflow-y-auto">
             <PublicWebsite
               onEnterApp={() => setViewMode('authenticated_web')}
-              onOpenLogin={() => {
-                setViewMode('authenticated_web');
-                setModule('login');
-              }}
-              onOpenRegister={() => {
-                setViewMode('authenticated_web');
-                setModule('registration');
-              }}
+              onOpenLogin={() => setViewMode('authenticated_web')}
+              onOpenRegister={() => setViewMode('authenticated_web')}
               onOpenDoctorPortal={() => setViewMode('doctor_portal')}
               onOpenAdminPortal={() => setViewMode('admin_portal')}
             />
@@ -765,8 +819,7 @@ export default function App() {
             onTriggerSos={() => setEmergencyOpen(true)}
             deviceTier="tablet"
             user={user}
-            onOpenAdmin={() => setViewMode('admin_portal')}
-            onOpenDoctor={() => setViewMode('doctor_portal')}
+            onLogout={handleLogout}
             onNavigateToPublic={() => setViewMode('public_web')}
           >
             {renderModuleScreen(false)}
@@ -779,8 +832,7 @@ export default function App() {
             onTriggerSos={() => setEmergencyOpen(true)}
             deviceTier="mobile"
             user={user}
-            onOpenAdmin={() => setViewMode('admin_portal')}
-            onOpenDoctor={() => setViewMode('doctor_portal')}
+            onLogout={handleLogout}
             onNavigateToPublic={() => setViewMode('public_web')}
           >
             {renderModuleScreen(true)}
@@ -792,14 +844,14 @@ export default function App() {
             onNavigate={setAdminRoute}
             currentAuth={adminAuth}
             onRoleSwitch={handleAdminRoleSwitch}
-            onExitAdminPortal={() => setViewMode('authenticated_web')}
+            onExitAdminPortal={handleLogout}
           >
             {renderAdminScreen()}
           </AdminLayout>
         ) : viewMode === 'doctor_portal' ? (
           // 6. Optional Doctor Portal (Authorized Patients Only, Timeline, Trends, Care Plans, Visual Distinction, Immutable Directives)
           <DoctorLayout
-            onExitDoctorPortal={() => setViewMode('authenticated_web')}
+            onExitDoctorPortal={handleLogout}
             showSnackbar={showSnackbar}
           />
         ) : viewMode === 'cross_platform_test' ? (
@@ -817,8 +869,7 @@ export default function App() {
             onTriggerSos={() => setEmergencyOpen(true)}
             deviceTier="desktop"
             user={user}
-            onOpenAdmin={() => setViewMode('admin_portal')}
-            onOpenDoctor={() => setViewMode('doctor_portal')}
+            onLogout={handleLogout}
             onNavigateToPublic={() => setViewMode('public_web')}
           >
             {renderModuleScreen(false)}

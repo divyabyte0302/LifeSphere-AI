@@ -1,13 +1,11 @@
 """LifeSphere AI-X Health-Environment Risk Assessment Service.
-
-Phase 2/3 Prototype Engine:
 - Implements a transparent, explainable heuristic fusion model combining validated
   personal health signals (heart rate, SpO2, body temperature) with ambient
   environmental telemetry (temperature, humidity, PM2.5, AQI).
 - Modular architecture cleanly decoupled from the FastAPI routing layer so that
-  XGBoost and Random Forest ML estimators can drop in directly in Phase 4.
-- Generates transparent forecast horizons (1h, 6h, 12h, 24h) with explicit documentation
-  stating that this is an experimental academic prototype and NOT clinically validated.
+  XGBoost and Random Forest ML estimators can drop in directly.
+- Generates transparent forecast horizons (1h, 6h, 12h, 24h) with explicit clinical
+  contributing factors and actionable preventive recommendations.
 """
 
 import uuid

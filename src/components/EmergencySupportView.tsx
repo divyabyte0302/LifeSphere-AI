@@ -4,8 +4,6 @@ import {
   ShieldAlert,
   CheckCircle2,
   XCircle,
-  WifiOff,
-  Copy,
   Clock,
   Activity,
   FileText,
@@ -19,9 +17,28 @@ import {
   Wind,
   Check,
   ChevronRight,
-  Database
+  Users,
+  UserPlus,
+  Bell,
+  Settings2,
+  Eye,
+  EyeOff,
+  Trash2,
+  AlertOctagon,
+  Navigation,
+  Radio,
+  Plus,
 } from 'lucide-react';
-import { HealthMetrics, EnvironmentalData, EmergencyAlert, EmergencyAuditLog } from '../types';
+import {
+  HealthMetrics,
+  EnvironmentalData,
+  EmergencyContact,
+  EmergencyAlertRule,
+  EmergencyEventRecord,
+  EmergencyRelationship,
+  AlertSeverity,
+} from '../types';
+import { emergencyService } from '../services/emergencyService';
 
 interface EmergencySupportViewProps {
   vitals: HealthMetrics;
@@ -38,860 +55,1179 @@ export const EmergencySupportView: React.FC<EmergencySupportViewProps> = ({
   showSnackbar,
   isMobile = false,
 }) => {
-  // Configured Detection Rules
-  const [detectionRulesEnabled, setDetectionRulesEnabled] = useState(true);
-  const [simulateNetworkFailure, setSimulateNetworkFailure] = useState(false);
+  // Navigation Tabs
+  const [activeTab, setActiveTab] = useState<'sos_active' | 'contacts' | 'rules' | 'history'>('sos_active');
 
-  // Active Alert State
-  const [currentAlert, setCurrentAlert] = useState<EmergencyAlert | null>(null);
-  
-  // Storage of Stored Alerts
-  const [storedAlerts, setStoredAlerts] = useState<EmergencyAlert[]>([]);
+  // SOS Countdown & Abort State
+  const [sosCountdown, setSosCountdown] = useState<number | null>(null);
+  const [isActivatingSos, setIsActivatingSos] = useState(false);
+  const [includeLocation, setIncludeLocation] = useState(true);
+  const [currentGps, setCurrentGps] = useState<{ lat: number; lng: number } | null>(null);
+  const [emergencyNumber, setEmergencyNumber] = useState('911');
 
-  // Audit Logs (HIPAA Compliance)
-  const [auditLogs, setAuditLogs] = useState<EmergencyAuditLog[]>([]);
+  // Ambulance Action State
+  const [ambulanceLaunched, setAmbulanceLaunched] = useState(false);
+  const [dialerMessage, setDialerMessage] = useState<string | null>(null);
 
-  // Action status message
-  const [actionNotice, setActionNotice] = useState<{
-    type: 'success' | 'warning' | 'error' | 'info';
-    message: string;
-  } | null>(null);
+  // Active Emergency Event
+  const [activeEvent, setActiveEvent] = useState<EmergencyEventRecord | null>(null);
 
-  // Active view tab: 'active_alert' | 'rules' | 'stored_records' | 'audit_logs'
-  const [activeTab, setActiveTab] = useState<'alert' | 'records' | 'logs'>('alert');
+  // Contacts State
+  const [contacts, setContacts] = useState<EmergencyContact[]>([]);
+  const [showContactModal, setShowContactModal] = useState(false);
+  const [editingContact, setEditingContact] = useState<EmergencyContact | null>(null);
+  const [revealedPhones, setRevealedPhones] = useState<Record<string, boolean>>({});
 
-  // Initialize with sample audit log and test pattern
+  // New Contact Form State
+  const [contactName, setContactName] = useState('');
+  const [contactRelation, setContactRelation] = useState<EmergencyRelationship>('Spouse');
+  const [contactPhone, setContactPhone] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
+  const [contactIsPrimary, setContactIsPrimary] = useState(false);
+  const [contactConsent, setContactConsent] = useState(true);
+  const [contactPush, setContactPush] = useState(true);
+  const [contactSms, setContactSms] = useState(true);
+  const [contactInApp, setContactInApp] = useState(true);
+
+  // Alert Rules State
+  const [rules, setRules] = useState<EmergencyAlertRule[]>([]);
+  const [evaluationResult, setEvaluationResult] = useState<ReturnType<typeof emergencyService.evaluateVitalsAgainstRules> | null>(null);
+
+  // History State
+  const [eventHistory, setEventHistory] = useState<EmergencyEventRecord[]>([]);
+  const [selectedEventForAck, setSelectedEventForAck] = useState<EmergencyEventRecord | null>(null);
+  const [ackResponderName, setAckResponderName] = useState('Sarah Vance (Spouse)');
+  const [ackNotes, setAckNotes] = useState('');
+
+  // 1. Initial Load of Contacts, Rules, and Events
   useEffect(() => {
-    // Check initial state
-    const initialAlert: EmergencyAlert = {
-      alertId: 'ALT-2026-9814',
-      userId,
-      trigger: 'CRITICAL_RULE_01: Acute Hypoxemia with Sinus Tachycardia under PM2.5 Spike',
-      evidence: {
-        whyAlertAppeared:
-          'SpO2 oxygen saturation dropped abruptly below 89% for >120 seconds while resting heart rate exceeded 124 BPM, co-occurring with an environmental PM2.5 spike (18.4 µg/m³) in a patient with documented allergic asthma.',
-        measurementsInvolved: [
-          {
-            name: 'Blood Oxygen (SpO2)',
-            value: vitals.spO2 > 90 ? 88.4 : vitals.spO2,
-            unit: '%',
-            threshold: '< 90.0%',
-            status: 'critical',
-          },
-          {
-            name: 'Heart Rate',
-            value: vitals.heartRate < 100 ? 126 : vitals.heartRate,
-            unit: 'BPM',
-            threshold: '> 120 BPM',
-            status: 'critical',
-          },
-          {
-            name: 'Atmospheric PM2.5',
-            value: environment.pm25,
-            unit: 'µg/m³',
-            threshold: '> 15.0 µg/m³',
-            status: 'concerning',
-          },
-          {
-            name: 'Heart Rate Variability (SDNN)',
-            value: 28,
-            unit: 'ms',
-            threshold: '< 35 ms (Depressed)',
-            status: 'abnormal',
-          },
-        ],
-        timeOfMeasurements: new Date(Date.now() - 3 * 60 * 1000).toLocaleTimeString([], {
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-        }),
-        possibleSignificance:
-          'Possible acute bronchospasm, exercise-induced asthma with hypoxemia, or early cardiopulmonary compensation requiring clinical triage.',
-        uncertaintyExplanation:
-          'Photoplethysmography (PPG) sensors may be affected by peripheral vasoconstriction, intense motion artifacts, ambient cold exposure, or loose sensor band tension.',
-      },
-      createdAt: new Date(Date.now() - 3 * 60 * 1000).toISOString(),
-      shownAt: new Date(Date.now() - 2 * 60 * 1000).toISOString(),
-      confirmedAt: null,
-      cancelledAt: null,
-      actionResult: 'PENDING_USER_CONFIRMATION',
-    };
+    loadData();
+  }, [userId]);
 
-    setCurrentAlert(initialAlert);
+  const loadData = async () => {
+    const c = await emergencyService.getEmergencyContacts(userId);
+    setContacts(c);
 
-    // Initial audit log
-    const initialLog: EmergencyAuditLog = {
-      id: `AUD-${Date.now()}-01`,
-      alertId: initialAlert.alertId,
-      userId,
-      action: 'EMERGENCY_ALERT_SHOWN',
-      timestamp: initialAlert.shownAt,
-      details: 'Critical pattern alert displayed to user on screen. Awaiting explicit user confirmation.',
-      clientPlatform: isMobile ? 'Android Mobile' : 'Web SaaS',
-    };
+    const r = await emergencyService.getAlertRules(userId);
+    setRules(r);
 
-    setAuditLogs([initialLog]);
-  }, [userId, isMobile]);
+    const h = await emergencyService.getEmergencyEventHistory(userId);
+    setEventHistory(h);
 
-  // Helper to log audit events
-  const addAuditLog = (
-    alertId: string,
-    action: EmergencyAuditLog['action'],
-    details: string
-  ) => {
-    const newLog: EmergencyAuditLog = {
-      id: `AUD-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-      alertId,
-      userId,
-      action,
-      timestamp: new Date().toISOString(),
-      details,
-      clientPlatform: isMobile ? 'Android Mobile' : 'Web SaaS',
-    };
-    setAuditLogs((prev) => [newLog, ...prev]);
+    const active = h.find((e) => e.status === 'active');
+    if (active) setActiveEvent(active);
   };
 
-  // 1. Confirm Emergency Action
-  const handleConfirmEmergencyAction = () => {
-    if (!currentAlert) return;
+  // 2. Real-time Rule Evaluation with Data-Quality Checks
+  useEffect(() => {
+    if (rules.length > 0) {
+      const evalRes = emergencyService.evaluateVitalsAgainstRules(vitals, environment, rules);
+      setEvaluationResult(evalRes);
 
-    // Test Network Failure condition
-    if (simulateNetworkFailure) {
-      const updatedAlert: EmergencyAlert = {
-        ...currentAlert,
-        confirmedAt: new Date().toISOString(),
-        actionResult: 'NETWORK_FAILURE_SMS_QUEUED',
-        networkSimulatedFailure: true,
-      };
+      // If critical automated rule triggered and no active event, notify user
+      if (evalRes.triggered && evalRes.rule && !activeEvent && evalRes.severity === 'critical') {
+        // Automatically create alert record
+        emergencyService.triggerAutomatedRuleAlert({
+          userId,
+          rule: evalRes.rule,
+          reason: evalRes.reason || 'Critical vital threshold breached',
+          vitals,
+          environment,
+        }).then((newEv) => {
+          setActiveEvent(newEv);
+          loadData();
+          showSnackbar?.(`🚨 Automated Critical Alert: ${evalRes.rule?.name}`);
+        });
+      }
+    }
+  }, [vitals, environment, rules]);
 
-      setCurrentAlert(updatedAlert);
-      setStoredAlerts((prev) => [updatedAlert, ...prev]);
+  // 3. SOS Countdown Timer Hook
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (sosCountdown !== null && sosCountdown > 0) {
+      timer = setTimeout(() => {
+        setSosCountdown((prev) => (prev !== null ? prev - 1 : null));
+      }, 1000);
+    } else if (sosCountdown === 0) {
+      // Countdown expired: trigger emergency action
+      executeManualSos();
+      setSosCountdown(null);
+    }
+    return () => clearTimeout(timer);
+  }, [sosCountdown]);
 
-      addAuditLog(
-        currentAlert.alertId,
-        'NETWORK_FAILURE_FALLBACK',
-        'Cloud telemetry dispatch failed due to simulated network timeout. Encrypted SMS fallback packet queued in local offline outbox for ICE contacts & EMS.'
-      );
+  // Handle Manual SOS Button Click
+  const handleStartSosCountdown = () => {
+    setSosCountdown(3); // 3 second safety countdown before auto-transmission
+  };
 
-      setActionNotice({
-        type: 'warning',
-        message: 'Network timeout: Primary cloud relay failed. Encrypted SOS packet queued locally for offline emergency dispatch.',
+  const handleCancelCountdown = () => {
+    setSosCountdown(null);
+    showSnackbar?.('SOS activation aborted by user.');
+  };
+
+  const executeManualSos = async () => {
+    setIsActivatingSos(true);
+    try {
+      const event = await emergencyService.triggerManualSos({
+        userId,
+        reason: 'Manual SOS Triggered: User requested immediate medical/emergency assistance.',
+        vitals,
+        environment,
+        includeLocation,
+        localEmergencyNumber: emergencyNumber,
       });
-      showSnackbar?.('Emergency action queued locally (Network Failure Fallback).');
+
+      setActiveEvent(event);
+      await loadData();
+      showSnackbar?.('🚨 Emergency SOS Dispatched to Designated Contacts!');
+    } catch (err) {
+      showSnackbar?.(`SOS trigger error: ${err instanceof Error ? err.message : 'Unknown'}`);
+    } finally {
+      setIsActivatingSos(false);
+    }
+  };
+
+  // Direct Ambulance Call Action
+  const handleLaunchAmbulanceDialer = () => {
+    const callResult = emergencyService.initiateAmbulanceCall(
+      emergencyNumber,
+      activeEvent?.id,
+      userId
+    );
+
+    setAmbulanceLaunched(true);
+    setDialerMessage(callResult.disclaimer);
+
+    // Launch native phone dialer via browser window.location
+    window.location.href = callResult.telUri;
+    showSnackbar?.(`Launching native dialer (${emergencyNumber})...`);
+  };
+
+  // Contacts Management
+  const handleSaveContact = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!contactName.trim() || !contactPhone.trim()) {
+      showSnackbar?.('Name and phone number are required.');
       return;
     }
 
-    // Normal successful authorized dispatch
-    const updatedAlert: EmergencyAlert = {
-      ...currentAlert,
-      confirmedAt: new Date().toISOString(),
-      actionResult: 'AUTHORIZED_EMERGENCY_DISPATCHED',
-    };
-
-    setCurrentAlert(updatedAlert);
-    setStoredAlerts((prev) => [updatedAlert, ...prev]);
-
-    addAuditLog(
-      currentAlert.alertId,
-      'EMERGENCY_ACTION_CONFIRMED',
-      'User explicitly confirmed emergency action. Transmitted ICE Medical Passport, GPS coordinates, and real-time biometrics to authorized responder integration.'
-    );
-
-    setActionNotice({
-      type: 'success',
-      message: 'Authorized emergency action executed. Emergency services and ICE contacts have been notified with verified credentials.',
-    });
-    showSnackbar?.('Emergency dispatch authorized and transmitted.');
-  };
-
-  // 2. Cancel
-  const handleCancelAlert = () => {
-    if (!currentAlert) return;
-
-    const updatedAlert: EmergencyAlert = {
-      ...currentAlert,
-      cancelledAt: new Date().toISOString(),
-      actionResult: 'CANCELLED_BY_USER',
-    };
-
-    setCurrentAlert(updatedAlert);
-    setStoredAlerts((prev) => [updatedAlert, ...prev]);
-
-    addAuditLog(
-      currentAlert.alertId,
-      'EMERGENCY_ACTION_CANCELLED',
-      'User dismissed the alert. Emergency dispatch was aborted. No external services were contacted.'
-    );
-
-    setActionNotice({
-      type: 'info',
-      message: 'Alert cancelled. No emergency services were contacted.',
-    });
-    showSnackbar?.('Emergency alert cancelled.');
-  };
-
-  // 3. I'm Safe (User reports false alarm / felt fine)
-  const handleImSafe = () => {
-    if (!currentAlert) return;
-
-    const updatedAlert: EmergencyAlert = {
-      ...currentAlert,
-      cancelledAt: new Date().toISOString(),
-      actionResult: 'SAFE_CONFIRMED_BY_USER',
-    };
-
-    setCurrentAlert(updatedAlert);
-    setStoredAlerts((prev) => [updatedAlert, ...prev]);
-
-    addAuditLog(
-      currentAlert.alertId,
-      'EMERGENCY_SAFE_CONFIRMED',
-      'User confirmed "I\'m Safe". Flagged as non-emergent artifact or transient elevation. Duplicate suppression window activated for 10 minutes.'
-    );
-
-    setActionNotice({
-      type: 'success',
-      message: 'Thank you for confirming. "I\'m Safe" status recorded. Duplicate alerts for this pattern are suppressed.',
-    });
-    showSnackbar?.('Recorded as Safe. Duplicate alerts suppressed.');
-  };
-
-  // TEST: Duplicate Alert Trigger
-  const handleTestDuplicateAlert = () => {
-    if (!currentAlert) {
-      showSnackbar?.('No baseline alert to duplicate.');
+    if (!contactConsent) {
+      showSnackbar?.('Explicit user consent is legally required to register emergency contacts.');
       return;
     }
 
-    // Attempting to fire the exact same trigger within suppression window
-    addAuditLog(
-      currentAlert.alertId,
-      'DUPLICATE_ALERT_SUPPRESSED',
-      `Duplicate critical pattern (${currentAlert.trigger}) was detected within the 10-minute suppression cooldown. Alert suppressed to prevent patient alarm fatigue.`
-    );
-
-    setActionNotice({
-      type: 'info',
-      message: `Duplicate Alert Suppressed: Identical pattern (${currentAlert.alertId}) detected within deduplication window. Prevented duplicate notification.`,
+    await emergencyService.saveEmergencyContact(userId, {
+      id: editingContact?.id,
+      name: contactName,
+      relationship: contactRelation,
+      phone: contactPhone,
+      email: contactEmail || undefined,
+      isPrimary: contactIsPrimary,
+      notificationPreferences: {
+        push: contactPush,
+        sms: contactSms,
+        inApp: contactInApp,
+      },
+      hasExplicitConsent: contactConsent,
+      consentGrantedAt: new Date().toISOString(),
     });
-    showSnackbar?.('Duplicate alert suppressed according to safety rules.');
+
+    setShowContactModal(false);
+    resetContactForm();
+    await loadData();
+    showSnackbar?.('Emergency contact saved successfully.');
   };
 
-  // Trigger New Critical Pattern Simulation
-  const handleTriggerNewPattern = (patternType: 'hypoxia' | 'bradycardia' | 'cardiac_strain') => {
-    const newAlertId = `ALT-${Date.now().toString().slice(-4)}`;
-    let triggerName = '';
-    let evidence: EmergencyAlert['evidence'];
+  const handleDeleteContact = async (id: string) => {
+    await emergencyService.deleteEmergencyContact(userId, id);
+    await loadData();
+    showSnackbar?.('Emergency contact removed.');
+  };
 
-    if (patternType === 'hypoxia') {
-      triggerName = 'CRITICAL_RULE_01: Acute Hypoxemia with Sinus Tachycardia';
-      evidence = {
-        whyAlertAppeared:
-          'Continuous pulse oximeter registered SpO2 drop to 87% accompanied by heart rate accelerating to 132 BPM in ambient PM2.5 of 22 µg/m³.',
-        measurementsInvolved: [
-          { name: 'SpO2 Oxygen Saturation', value: '87.0', unit: '%', threshold: '< 90%', status: 'critical' },
-          { name: 'Heart Rate', value: '132', unit: 'BPM', threshold: '> 120 BPM', status: 'critical' },
-          { name: 'Ambient PM2.5', value: '22.4', unit: 'µg/m³', threshold: '> 15 µg/m³', status: 'concerning' },
-        ],
-        timeOfMeasurements: new Date().toLocaleTimeString(),
-        possibleSignificance: 'Severe respiratory compromise or acute asthma exacerbation.',
-        uncertaintyExplanation: 'Sensor displacement or cold extremities may contribute to lower PPG reading.',
-      };
-    } else if (patternType === 'bradycardia') {
-      triggerName = 'CRITICAL_RULE_02: Severe Sustained Bradycardia with Hypotension';
-      evidence = {
-        whyAlertAppeared:
-          'Resting heart rate fell to 38 BPM for >3 minutes with estimated blood pressure 88/54 mmHg while inactive.',
-        measurementsInvolved: [
-          { name: 'Heart Rate', value: '38', unit: 'BPM', threshold: '< 40 BPM', status: 'critical' },
-          { name: 'Blood Pressure', value: '88/54', unit: 'mmHg', threshold: '< 90/60 mmHg', status: 'critical' },
-          { name: 'Respiratory Rate', value: '10', unit: 'bpm', threshold: '< 12 bpm', status: 'abnormal' },
-        ],
-        timeOfMeasurements: new Date().toLocaleTimeString(),
-        possibleSignificance: 'Significant vagal response, conduction abnormality, or severe drug bradycardia.',
-        uncertaintyExplanation: 'Sleeping artifact or intermittent loose sensor contact may falsely register low beats.',
-      };
-    } else {
-      triggerName = 'CRITICAL_RULE_03: Extreme Thermal Cardiac Strain';
-      evidence = {
-        whyAlertAppeared:
-          'Heart rate elevated to 142 BPM sustained while ambient temperature reached 39.2°C and UV Index registered 10.4.',
-        measurementsInvolved: [
-          { name: 'Heart Rate', value: '142', unit: 'BPM', threshold: '> 130 BPM', status: 'critical' },
-          { name: 'Ambient Temp', value: '39.2', unit: '°C', threshold: '> 35°C', status: 'critical' },
-          { name: 'UV Radiation Index', value: '10.4', unit: 'UV', threshold: '> 8.0', status: 'critical' },
-        ],
-        timeOfMeasurements: new Date().toLocaleTimeString(),
-        possibleSignificance: 'Risk of heat exhaustion progressing to heat stroke and cardiovascular decompensation.',
-        uncertaintyExplanation: 'Active high-intensity exercise may account for heart rate elevation.',
-      };
-    }
+  const resetContactForm = () => {
+    setEditingContact(null);
+    setContactName('');
+    setContactRelation('Spouse');
+    setContactPhone('');
+    setContactEmail('');
+    setContactIsPrimary(false);
+    setContactConsent(true);
+    setContactPush(true);
+    setContactSms(true);
+    setContactInApp(true);
+  };
 
-    const alert: EmergencyAlert = {
-      alertId: newAlertId,
+  const openEditContact = (c: EmergencyContact) => {
+    setEditingContact(c);
+    setContactName(c.name);
+    setContactRelation(c.relationship);
+    setContactPhone(c.phone);
+    setContactEmail(c.email || '');
+    setContactIsPrimary(c.isPrimary);
+    setContactConsent(c.hasExplicitConsent);
+    setContactPush(c.notificationPreferences.push);
+    setContactSms(c.notificationPreferences.sms);
+    setContactInApp(c.notificationPreferences.inApp);
+    setShowContactModal(true);
+  };
+
+  const togglePhoneMask = (id: string) => {
+    setRevealedPhones((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const maskPhone = (phone: string, id: string) => {
+    if (revealedPhones[id]) return phone;
+    // Mask middle digits: +1 (555) 019-2834 -> +1 (555) ***-2834
+    if (phone.length <= 6) return phone;
+    return phone.replace(/(\d{3})[ -]?\d{3}[ -]?(\d{4})/, '$1 ***-$2');
+  };
+
+  // Rule Threshold Update
+  const handleToggleRule = async (rule: EmergencyAlertRule) => {
+    const updated = { ...rule, isEnabled: !rule.isEnabled };
+    await emergencyService.updateAlertRule(userId, updated);
+    await loadData();
+    showSnackbar?.(`Rule "${rule.name}" ${updated.isEnabled ? 'enabled' : 'disabled'}.`);
+  };
+
+  const handleUpdateThreshold = async (rule: EmergencyAlertRule, newThreshold: number) => {
+    const updated = { ...rule, threshold: newThreshold };
+    await emergencyService.updateAlertRule(userId, updated);
+    await loadData();
+  };
+
+  // Acknowledge Event
+  const handleAcknowledgeEvent = async () => {
+    if (!selectedEventForAck) return;
+    await emergencyService.acknowledgeEmergencyEvent(
       userId,
-      trigger: triggerName,
-      evidence,
-      createdAt: new Date().toISOString(),
-      shownAt: new Date().toISOString(),
-      confirmedAt: null,
-      cancelledAt: null,
-      actionResult: 'PENDING_USER_CONFIRMATION',
-    };
+      selectedEventForAck.id,
+      ackResponderName,
+      ackNotes || undefined
+    );
+    setSelectedEventForAck(null);
+    setAckNotes('');
+    await loadData();
+    showSnackbar?.('Emergency incident acknowledged.');
+  };
 
-    setCurrentAlert(alert);
-    setActionNotice(null);
-    addAuditLog(newAlertId, 'EMERGENCY_ALERT_GENERATED', `Pattern matched rule: ${triggerName}`);
-    addAuditLog(newAlertId, 'EMERGENCY_ALERT_SHOWN', 'Alert modal presented to patient.');
-    showSnackbar?.('New critical pattern detected. Review evidence.');
+  // Resolve Active Event
+  const handleResolveEvent = async (id: string) => {
+    await emergencyService.resolveEmergencyEvent(userId, id);
+    setActiveEvent(null);
+    await loadData();
+    showSnackbar?.('Emergency incident resolved.');
+  };
+
+  // Cancel False Alarm
+  const handleCancelEvent = async (id: string) => {
+    await emergencyService.cancelEmergencyEvent(userId, id);
+    setActiveEvent(null);
+    await loadData();
+    showSnackbar?.('Emergency alert cancelled (marked false alarm).');
   };
 
   return (
-    <div className="space-y-6">
-      
-      {/* Top Banner & Mode Tabs */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900 border border-slate-800 p-4 rounded-2xl">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-rose-500/20 text-rose-400 border border-rose-500/30">
-            <ShieldAlert className="w-6 h-6 animate-pulse" />
-          </div>
+    <div className="space-y-6 max-w-7xl mx-auto pb-12">
+      {/* Header Banner */}
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 relative overflow-hidden shadow-xl">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-rose-500/10 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
           <div>
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              Emergency Support & Response Engine
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30 uppercase tracking-wider">
-                Safety Protocol
+            <div className="flex items-center gap-3 mb-2">
+              <span className="p-2.5 bg-rose-500/20 text-rose-400 rounded-xl border border-rose-500/30">
+                <ShieldAlert className="w-6 h-6 animate-pulse" />
               </span>
-            </h2>
-            <p className="text-xs text-slate-400">
-              Rule-based critical pattern detection with mandatory user confirmation and audit trails.
-            </p>
+              <div>
+                <h1 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
+                  Emergency Detection & Response
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30 uppercase">
+                    Module 2
+                  </span>
+                </h1>
+                <p className="text-xs text-slate-400">
+                  Real-time biomarker monitoring, one-tap SOS, registered contact escalation, and direct 911 dispatch guidance.
+                </p>
+              </div>
+            </div>
+
+            {/* Strict Regulatory & Clinical Disclaimers */}
+            <div className="mt-3 flex items-start gap-2 p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-300 max-w-3xl">
+              <Info className="w-4 h-4 shrink-0 mt-0.5" />
+              <span>
+                <strong>CRITICAL SAFETY ADVICE:</strong> For suspected life-threatening medical emergencies, do not wait for AI assessment or telemetry relay.
+                Contact local emergency services (<strong>{emergencyNumber}</strong>) immediately. Automated features notify your ICE contacts and assist with location sharing but do not replace municipal emergency dispatchers.
+              </span>
+            </div>
+          </div>
+
+          {/* Quick Stats / Status Pill */}
+          <div className="flex items-center gap-3">
+            <div className="px-3.5 py-2 rounded-xl bg-slate-800/80 border border-slate-700/80 text-right">
+              <div className="text-[10px] text-slate-400 font-medium">Registered ICE Contacts</div>
+              <div className="text-sm font-bold text-white flex items-center justify-end gap-1.5">
+                <Users className="w-3.5 h-3.5 text-emerald-400" />
+                {contacts.length} Configured
+              </div>
+            </div>
+
+            <div className="px-3.5 py-2 rounded-xl bg-slate-800/80 border border-slate-700/80 text-right">
+              <div className="text-[10px] text-slate-400 font-medium">Data-Quality Filter</div>
+              <div className="text-sm font-bold flex items-center justify-end gap-1.5 text-emerald-400">
+                <ShieldCheck className="w-3.5 h-3.5" />
+                15-Min Staleness Guard
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* View Navigation Tabs */}
-        <div className="flex items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
+        {/* View Tabs */}
+        <div className="flex flex-wrap items-center gap-2 mt-6 pt-5 border-t border-slate-800">
           <button
-            onClick={() => setActiveTab('alert')}
-            className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${
-              activeTab === 'alert'
-                ? 'bg-rose-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-white'
+            onClick={() => setActiveTab('sos_active')}
+            className={`px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all ${
+              activeTab === 'sos_active'
+                ? 'bg-rose-600 text-white shadow-lg shadow-rose-600/30'
+                : 'bg-slate-800/60 text-slate-400 hover:text-white hover:bg-slate-800'
             }`}
           >
-            Active Alert
+            <AlertOctagon className="w-3.5 h-3.5" />
+            SOS & Active Response
+            {activeEvent && (
+              <span className="w-2 h-2 rounded-full bg-rose-400 animate-ping ml-1" />
+            )}
           </button>
+
           <button
-            onClick={() => setActiveTab('records')}
-            className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${
-              activeTab === 'records'
-                ? 'bg-slate-800 text-white'
-                : 'text-slate-400 hover:text-white'
+            onClick={() => setActiveTab('contacts')}
+            className={`px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all ${
+              activeTab === 'contacts'
+                ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/30'
+                : 'bg-slate-800/60 text-slate-400 hover:text-white hover:bg-slate-800'
             }`}
           >
-            Stored Records ({storedAlerts.length})
+            <Users className="w-3.5 h-3.5" />
+            Registered Contacts ({contacts.length})
           </button>
+
           <button
-            onClick={() => setActiveTab('logs')}
-            className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${
-              activeTab === 'logs'
-                ? 'bg-slate-800 text-white'
-                : 'text-slate-400 hover:text-white'
+            onClick={() => setActiveTab('rules')}
+            className={`px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all ${
+              activeTab === 'rules'
+                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
+                : 'bg-slate-800/60 text-slate-400 hover:text-white hover:bg-slate-800'
             }`}
           >
-            Audit Logs ({auditLogs.length})
+            <Settings2 className="w-3.5 h-3.5" />
+            Health-Alert Rules ({rules.length})
+          </button>
+
+          <button
+            onClick={() => setActiveTab('history')}
+            className={`px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all ${
+              activeTab === 'history'
+                ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/30'
+                : 'bg-slate-800/60 text-slate-400 hover:text-white hover:bg-slate-800'
+            }`}
+          >
+            <FileText className="w-3.5 h-3.5" />
+            Event & Delivery History ({eventHistory.length})
           </button>
         </div>
       </div>
 
-      {/* Action Notification Box if any */}
-      {actionNotice && (
-        <div
-          className={`p-4 rounded-2xl border text-xs flex items-start gap-3 animate-in fade-in ${
-            actionNotice.type === 'success'
-              ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-200'
-              : actionNotice.type === 'warning'
-              ? 'bg-amber-950/40 border-amber-500/40 text-amber-200'
-              : actionNotice.type === 'info'
-              ? 'bg-sky-950/40 border-sky-500/40 text-sky-200'
-              : 'bg-rose-950/40 border-rose-500/40 text-rose-200'
-          }`}
-        >
-          {actionNotice.type === 'success' && <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />}
-          {actionNotice.type === 'warning' && <WifiOff className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />}
-          {actionNotice.type === 'info' && <Info className="w-5 h-5 text-sky-400 shrink-0 mt-0.5" />}
-          {actionNotice.type === 'error' && <AlertTriangle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />}
-          <div className="flex-1">
-            <span className="font-semibold">{actionNotice.message}</span>
+      {/* ==================================================================== */}
+      {/* TAB 1: SOS & ACTIVE RESPONSE */}
+      {/* ==================================================================== */}
+      {activeTab === 'sos_active' && (
+        <div className="space-y-6">
+          {/* Active Emergency Banner if Active Event Exists */}
+          {activeEvent && (
+            <div className="bg-rose-950/40 border-2 border-rose-500 rounded-2xl p-6 relative overflow-hidden shadow-2xl animate-pulse">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-start gap-4">
+                  <span className="p-3 bg-rose-500 text-white rounded-2xl shadow-lg">
+                    <AlertTriangle className="w-8 h-8" />
+                  </span>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs uppercase font-bold tracking-wider text-rose-400">
+                        {activeEvent.triggerType === 'MANUAL_SOS' ? 'Manual SOS Incident' : 'Automated Health Alert'}
+                      </span>
+                      <span className="px-2 py-0.5 rounded text-[10px] bg-rose-500 text-white font-mono uppercase">
+                        Status: {activeEvent.status}
+                      </span>
+                    </div>
+                    <h2 className="text-lg font-bold text-white mt-0.5">{activeEvent.title}</h2>
+                    <p className="text-xs text-rose-200 mt-1 max-w-2xl">{activeEvent.reason}</p>
+                    <div className="text-[11px] text-slate-400 font-mono mt-2">
+                      Triggered: {new Date(activeEvent.triggeredAt).toLocaleString()} | ID: {activeEvent.id}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={() => handleLaunchAmbulanceDialer()}
+                    className="px-5 py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-lg shadow-rose-600/40 transition-all cursor-pointer"
+                  >
+                    <PhoneCall className="w-4 h-4" />
+                    Call Ambulance ({emergencyNumber})
+                  </button>
+
+                  <button
+                    onClick={() => handleResolveEvent(activeEvent.id)}
+                    className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl text-xs flex items-center gap-1.5 transition-all cursor-pointer"
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    Mark Resolved
+                  </button>
+
+                  <button
+                    onClick={() => handleCancelEvent(activeEvent.id)}
+                    className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-xl text-xs flex items-center gap-1.5 transition-all cursor-pointer"
+                  >
+                    <XCircle className="w-4 h-4" />
+                    Cancel (False Alarm)
+                  </button>
+                </div>
+              </div>
+
+              {/* Delivery Status to Contacts for this event */}
+              <div className="mt-4 pt-4 border-t border-rose-500/20">
+                <div className="text-xs font-semibold text-rose-300 mb-2 flex items-center gap-1.5">
+                  <Radio className="w-3.5 h-3.5 text-rose-400 animate-spin" />
+                  Dispatch Receipts to Designated Emergency Contacts:
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                  {activeEvent.notificationsDispatched.map((receipt, idx) => (
+                    <div key={idx} className="bg-slate-900/80 p-2.5 rounded-lg border border-slate-800 flex items-center justify-between text-xs">
+                      <div>
+                        <div className="font-semibold text-slate-200">{receipt.contactName}</div>
+                        <div className="text-[10px] text-slate-400 uppercase font-mono">{receipt.channel} relay</div>
+                      </div>
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                        receipt.status === 'delivered'
+                          ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                          : receipt.status === 'sent'
+                          ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                          : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                      }`}>
+                        {receipt.status.toUpperCase()}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* SOS Trigger Center Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Column 1 & 2: Primary SOS Command Console */}
+            <div className="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-base font-bold text-white flex items-center gap-2">
+                    <AlertOctagon className="w-5 h-5 text-rose-500" />
+                    One-Tap Manual Emergency SOS
+                  </h2>
+                  <p className="text-xs text-slate-400">
+                    Instantly notifies registered family, caregiver, and emergency contacts with verified telemetry.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-700">
+                  <span className="text-[11px] text-slate-300 font-medium">Emergency Number:</span>
+                  <input
+                    type="text"
+                    value={emergencyNumber}
+                    onChange={(e) => setEmergencyNumber(e.target.value)}
+                    className="w-14 bg-slate-900 border border-slate-600 rounded px-1.5 py-0.5 text-center text-xs font-mono font-bold text-rose-400 focus:outline-none"
+                    title="Change local emergency number (e.g. 911, 112, 999)"
+                  />
+                </div>
+              </div>
+
+              {/* Massive Central SOS Button */}
+              <div className="flex flex-col items-center justify-center py-6 bg-slate-950/60 rounded-2xl border border-slate-800/80 relative">
+                {sosCountdown !== null ? (
+                  <div className="text-center space-y-4">
+                    <div className="w-32 h-32 rounded-full bg-rose-600 flex items-center justify-center text-white text-5xl font-black shadow-2xl shadow-rose-600/50 animate-bounce">
+                      {sosCountdown}
+                    </div>
+                    <div className="text-sm font-bold text-rose-400">
+                      Transmitting SOS in {sosCountdown} seconds...
+                    </div>
+                    <div className="flex items-center gap-3 justify-center">
+                      <button
+                        onClick={handleCancelCountdown}
+                        className="px-6 py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl text-xs transition-colors cursor-pointer"
+                      >
+                        Abort SOS
+                      </button>
+                      <button
+                        onClick={executeManualSos}
+                        className="px-6 py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl text-xs transition-colors cursor-pointer"
+                      >
+                        Send Immediately
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center space-y-4">
+                    <button
+                      onClick={handleStartSosCountdown}
+                      disabled={isActivatingSos}
+                      className="group relative w-36 h-36 rounded-full bg-gradient-to-br from-rose-500 to-red-700 hover:from-rose-600 hover:to-red-800 text-white flex flex-col items-center justify-center shadow-2xl shadow-rose-600/50 hover:scale-105 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+                    >
+                      <span className="absolute inset-0 rounded-full border-4 border-rose-400/30 animate-ping pointer-events-none" />
+                      <AlertTriangle className="w-10 h-10 mb-1 group-hover:scale-110 transition-transform" />
+                      <span className="text-xl font-black tracking-wider">HOLD SOS</span>
+                      <span className="text-[9px] uppercase tracking-widest text-rose-200">Tap to Initiate</span>
+                    </button>
+                    <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                      Activates 3-second safeguard countdown, then notifies all registered ICE contacts and launches 911 dialer.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Location Sharing & Options */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-4 rounded-xl bg-slate-950/40 border border-slate-800 flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    id="loc_consent"
+                    checked={includeLocation}
+                    onChange={(e) => setIncludeLocation(e.target.checked)}
+                    className="mt-1 w-4 h-4 rounded text-rose-600 focus:ring-0 bg-slate-800 border-slate-700"
+                  />
+                  <div>
+                    <label htmlFor="loc_consent" className="text-xs font-bold text-white cursor-pointer flex items-center gap-1.5">
+                      <Navigation className="w-3.5 h-3.5 text-rose-400" />
+                      Attach GPS Coordinates
+                    </label>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      Queries real browser geolocation on SOS trigger. Requires explicit user consent.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-xl bg-slate-950/40 border border-slate-800 flex items-start justify-between">
+                  <div>
+                    <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                      <PhoneCall className="w-3.5 h-3.5 text-rose-400" />
+                      Direct Ambulance Call
+                    </div>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      Launches native device telephony for direct human dispatch verification.
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleLaunchAmbulanceDialer}
+                    className="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-lg text-xs flex items-center gap-1 cursor-pointer transition-colors"
+                  >
+                    Call {emergencyNumber}
+                  </button>
+                </div>
+              </div>
+
+              {dialerMessage && (
+                <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-xs text-amber-300 flex items-start gap-2">
+                  <Info className="w-4 h-4 shrink-0 mt-0.5" />
+                  <div>{dialerMessage}</div>
+                </div>
+              )}
+            </div>
+
+            {/* Column 3: Live Telemetry & Data Quality Status */}
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-5">
+              <h2 className="text-base font-bold text-white flex items-center gap-2">
+                <Activity className="w-4 h-4 text-emerald-400" />
+                Live Telemetry Snapshot
+              </h2>
+
+              <div className="space-y-3">
+                <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <Heart className="w-4 h-4 text-rose-400" />
+                    <div>
+                      <div className="text-xs font-semibold text-slate-300">Heart Rate</div>
+                      <div className="text-[10px] text-slate-500">Optical PPG continuous</div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm font-bold text-white font-mono">{vitals.heartRate} bpm</div>
+                    <div className={`text-[10px] ${vitals.heartRate > 120 || vitals.heartRate < 45 ? 'text-rose-400 font-bold' : 'text-emerald-400'}`}>
+                      {vitals.heartRate > 120 ? 'Tachycardia' : vitals.heartRate < 45 ? 'Bradycardia' : 'Normal Sinus'}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <Droplets className="w-4 h-4 text-cyan-400" />
+                    <div>
+                      <div className="text-xs font-semibold text-slate-300">Blood Oxygen (SpO2)</div>
+                      <div className="text-[10px] text-slate-500">Red / IR optical ratio</div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm font-bold text-white font-mono">{vitals.spO2}%</div>
+                    <div className={`text-[10px] ${vitals.spO2 < 90 ? 'text-rose-400 font-bold' : 'text-emerald-400'}`}>
+                      {vitals.spO2 < 90 ? 'Hypoxemia (<90%)' : 'Optimal Oxygenation'}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <Wind className="w-4 h-4 text-purple-400" />
+                    <div>
+                      <div className="text-xs font-semibold text-slate-300">Atmospheric PM2.5</div>
+                      <div className="text-[10px] text-slate-500">EPA Air Quality Index</div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm font-bold text-white font-mono">{environment.pm25} µg/m³</div>
+                    <div className={`text-[10px] ${environment.pm25 > 35 ? 'text-amber-400 font-bold' : 'text-slate-400'}`}>
+                      AQI {environment.aqi} ({environment.cautionLevel})
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Data Quality Verification Status Box */}
+              <div className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                    Data Quality Filter
+                  </span>
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                    evaluationResult?.dataQualityChecks.passed
+                      ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                      : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                  }`}>
+                    {evaluationResult?.dataQualityChecks.passed ? 'PASSED' : 'FLAGGED'}
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-400">
+                  Telemetry age: <strong>{evaluationResult?.dataQualityChecks.sensorAgeMinutes || 0} min</strong> (15-min staleness threshold).
+                  Automated dispatches are blocked if sensor is detached or implausible values occur.
+                </p>
+                {evaluationResult && !evaluationResult.dataQualityChecks.passed && (
+                  <div className="text-[11px] text-rose-400 font-medium">
+                    Issue: {evaluationResult.dataQualityChecks.issues.join('; ')}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
-          <button
-            onClick={() => setActionNotice(null)}
-            className="text-slate-400 hover:text-white"
-          >
-            <XCircle className="w-4 h-4" />
-          </button>
         </div>
       )}
 
-      {/* TAB 1: ACTIVE ALERT / WORKFLOW VIEW */}
-      {activeTab === 'alert' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          
-          {/* Main Alert Card (Span 2) */}
-          <div className="lg:col-span-2 space-y-4">
-            {currentAlert ? (
-              <div className="bg-slate-900 border-2 border-rose-500/60 rounded-3xl overflow-hidden shadow-2xl shadow-rose-950/40">
-                
-                {/* ALERT DETECTED HEADER */}
-                <div className="bg-gradient-to-r from-rose-950 via-red-900/60 to-rose-950 px-6 py-5 border-b border-rose-500/30 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-xl bg-rose-600 text-white shadow-lg shadow-rose-600/50 animate-bounce">
-                      <AlertTriangle className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-extrabold text-white tracking-wide flex items-center gap-2">
-                        ALERT DETECTED
-                      </h3>
-                      <p className="text-xs text-rose-200 font-mono">
-                        Ref: {currentAlert.alertId} • User: {currentAlert.userId}
-                      </p>
-                    </div>
-                  </div>
+      {/* ==================================================================== */}
+      {/* TAB 2: REGISTERED CONTACTS (ICE) */}
+      {/* ==================================================================== */}
+      {activeTab === 'contacts' && (
+        <div className="space-y-6">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+              <div>
+                <h2 className="text-base font-bold text-white flex items-center gap-2">
+                  <Users className="w-5 h-5 text-emerald-400" />
+                  In Case of Emergency (ICE) Contacts
+                </h2>
+                <p className="text-xs text-slate-400">
+                  Designated family members, friends, and care team members notified during an emergency.
+                </p>
+              </div>
 
-                  <div className="text-right">
-                    <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30">
-                      {currentAlert.actionResult === 'PENDING_USER_CONFIRMATION'
-                        ? 'AWAITING USER'
-                        : currentAlert.actionResult.replace(/_/g, ' ')}
+              <button
+                onClick={() => {
+                  resetContactForm();
+                  setShowContactModal(true);
+                }}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs flex items-center gap-2 transition-colors cursor-pointer self-start sm:self-auto"
+              >
+                <UserPlus className="w-4 h-4" />
+                Add Emergency Contact
+              </button>
+            </div>
+
+            {/* Contacts Table / Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {contacts.map((contact) => (
+                <div
+                  key={contact.id}
+                  className={`p-5 rounded-2xl bg-slate-950/60 border ${
+                    contact.isPrimary ? 'border-emerald-500/40 shadow-lg shadow-emerald-500/5' : 'border-slate-800'
+                  } space-y-3 relative`}
+                >
+                  {contact.isPrimary && (
+                    <span className="absolute top-4 right-4 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 uppercase">
+                      Primary Contact
                     </span>
+                  )}
+
+                  <div>
+                    <h3 className="text-sm font-bold text-white">{contact.name}</h3>
+                    <div className="text-xs text-slate-400 font-medium">{contact.relationship}</div>
+                  </div>
+
+                  {/* Phone with privacy masking toggle */}
+                  <div className="flex items-center justify-between text-xs bg-slate-900/80 p-2 rounded-lg border border-slate-800">
+                    <span className="font-mono text-slate-300">{maskPhone(contact.phone, contact.id)}</span>
+                    <button
+                      onClick={() => togglePhoneMask(contact.id)}
+                      className="text-slate-400 hover:text-white p-1"
+                      title={revealedPhones[contact.id] ? 'Hide phone' : 'Show phone'}
+                    >
+                      {revealedPhones[contact.id] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
+
+                  {contact.email && (
+                    <div className="text-xs text-slate-400 truncate">
+                      Email: <span className="text-slate-300">{contact.email}</span>
+                    </div>
+                  )}
+
+                  {/* Channels */}
+                  <div className="flex items-center gap-1.5 pt-1">
+                    {contact.notificationPreferences.push && (
+                      <span className="px-2 py-0.5 rounded text-[10px] bg-slate-800 text-slate-300 border border-slate-700">Push</span>
+                    )}
+                    {contact.notificationPreferences.sms && (
+                      <span className="px-2 py-0.5 rounded text-[10px] bg-slate-800 text-slate-300 border border-slate-700">SMS</span>
+                    )}
+                    {contact.notificationPreferences.inApp && (
+                      <span className="px-2 py-0.5 rounded text-[10px] bg-slate-800 text-slate-300 border border-slate-700">In-App</span>
+                    )}
+                  </div>
+
+                  {/* Consent Badge */}
+                  <div className="text-[11px] text-emerald-400 flex items-center gap-1 pt-1">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    Explicit Consent Verified
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800/80">
+                    <button
+                      onClick={() => openEditContact(contact)}
+                      className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg text-xs"
+                      title="Edit Contact"
+                    >
+                      <Settings2 className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteContact(contact.id)}
+                      className="p-1.5 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 rounded-lg text-xs"
+                      title="Remove Contact"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
-                <div className="p-6 space-y-5">
-                  
-                  {/* Workflow Guide */}
-                  <div className="p-3 bg-slate-950/80 rounded-2xl border border-slate-800 text-[11px] text-slate-300 flex items-center justify-between overflow-x-auto gap-2">
-                    <span className="text-rose-400 font-bold flex items-center gap-1">1. Critical Pattern</span>
-                    <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
-                    <span className="text-amber-400 font-bold flex items-center gap-1">2. Evidence Shown</span>
-                    <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
-                    <span className="text-sky-400 font-bold flex items-center gap-1">3. Uncertainty</span>
-                    <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
-                    <span className="text-emerald-400 font-bold flex items-center gap-1">4. User Confirmation</span>
-                    <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
-                    <span className="text-white font-bold flex items-center gap-1">5. Authorized Action</span>
-                  </div>
+      {/* ==================================================================== */}
+      {/* TAB 3: HEALTH-ALERT RULES */}
+      {/* ==================================================================== */}
+      {activeTab === 'rules' && (
+        <div className="space-y-6">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-6">
+            <div>
+              <h2 className="text-base font-bold text-white flex items-center gap-2">
+                <Settings2 className="w-5 h-5 text-indigo-400" />
+                Configurable Health-Alert Rules & Thresholds
+              </h2>
+              <p className="text-xs text-slate-400">
+                Evidence-based alert triggers evaluated against real-time smartwatch PPG, accelerometer, and atmospheric telemetry.
+              </p>
+            </div>
 
-                  {/* Section 1: Why this alert appeared */}
-                  <div className="space-y-1.5">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-rose-400 flex items-center gap-1.5">
-                      <Activity className="w-4 h-4" /> Why this alert appeared
-                    </h4>
-                    <div className="p-3.5 bg-slate-950 rounded-2xl border border-slate-800/80 text-xs text-slate-200 leading-relaxed">
-                      {currentAlert.evidence.whyAlertAppeared}
+            <div className="space-y-3">
+              {rules.map((rule) => (
+                <div
+                  key={rule.id}
+                  className={`p-4 rounded-2xl bg-slate-950/60 border ${
+                    rule.isEnabled ? 'border-slate-800' : 'border-slate-800/40 opacity-60'
+                  } flex flex-col md:flex-row md:items-center justify-between gap-4`}
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-bold text-white">{rule.name}</h3>
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase font-mono ${
+                        rule.severity === 'critical' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                      }`}>
+                        {rule.severity}
+                      </span>
+                    </div>
+                    <div className="text-xs text-slate-400">
+                      Metric: <span className="font-mono text-slate-300">{rule.metric}</span> | Condition: <span className="font-mono text-slate-300">{rule.condition}</span> | Threshold: <span className="font-mono text-white font-bold">{rule.threshold}</span>
+                    </div>
+                    <div className="text-[11px] text-slate-500">
+                      Required duration: {rule.durationSeconds}s | Data quality checks: {rule.rejectInvalidReadings ? 'Enabled (Rejects stale/artifacts)' : 'Disabled'}
                     </div>
                   </div>
 
-                  {/* Section 2: Measurements involved */}
-                  <div className="space-y-2">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
-                      <Activity className="w-4 h-4" /> Measurements involved
-                    </h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                      {currentAlert.evidence.measurementsInvolved.map((m, idx) => (
-                        <div
-                          key={idx}
-                          className="p-3 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-between"
-                        >
-                          <div>
-                            <p className="text-xs text-slate-400 font-medium">{m.name}</p>
-                            <p className="text-[10px] text-slate-500">Threshold: {m.threshold}</p>
-                          </div>
-                          <div className="text-right">
-                            <span className="text-base font-extrabold font-mono text-white">
-                              {m.value}
-                            </span>{' '}
-                            <span className="text-xs text-slate-400">{m.unit}</span>
-                            <div>
-                              <span
-                                className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase ${
-                                  m.status === 'critical'
-                                    ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
-                                    : m.status === 'abnormal'
-                                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-                                    : 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/40'
-                                }`}
-                              >
-                                {m.status}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-slate-400">Threshold:</span>
+                      <input
+                        type="number"
+                        value={rule.threshold}
+                        onChange={(e) => handleUpdateThreshold(rule, parseFloat(e.target.value) || 0)}
+                        className="w-20 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white font-mono text-center"
+                      />
                     </div>
+
+                    <button
+                      onClick={() => handleToggleRule(rule)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                        rule.isEnabled
+                          ? 'bg-emerald-600/20 text-emerald-400 border border-emerald-500/30'
+                          : 'bg-slate-800 text-slate-400 border border-slate-700'
+                      }`}
+                    >
+                      {rule.isEnabled ? 'Enabled' : 'Disabled'}
+                    </button>
                   </div>
-
-                  {/* Section 3: Time of measurements & Possible significance */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <h4 className="text-xs font-bold uppercase tracking-wider text-sky-400 flex items-center gap-1.5">
-                        <Clock className="w-4 h-4" /> Time of measurements
-                      </h4>
-                      <div className="p-3 bg-slate-950 rounded-2xl border border-slate-800 text-xs font-mono text-slate-300">
-                        {currentAlert.evidence.timeOfMeasurements}
-                        <p className="text-[10px] text-slate-500 mt-0.5">
-                          Reported: {new Date(currentAlert.createdAt).toLocaleTimeString()}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <h4 className="text-xs font-bold uppercase tracking-wider text-purple-400 flex items-center gap-1.5">
-                        <FileText className="w-4 h-4" /> Possible significance
-                      </h4>
-                      <div className="p-3 bg-slate-950 rounded-2xl border border-slate-800 text-xs text-slate-300">
-                        {currentAlert.evidence.possibleSignificance}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Section 4: Uncertainty Explanation & Mandatory Disclaimer */}
-                  <div className="p-4 rounded-2xl bg-amber-950/20 border-2 border-amber-500/40 space-y-2">
-                    <div className="flex items-center gap-2 text-amber-400 font-extrabold text-xs tracking-wide">
-                      <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
-                      <span>Important: This is an AI-assisted alert and may be incorrect.</span>
-                    </div>
-                    <p className="text-xs text-amber-200/90 leading-relaxed">
-                      {currentAlert.evidence.uncertaintyExplanation}
-                    </p>
-                    <p className="text-[11px] text-slate-400 italic pt-1 border-t border-amber-500/20">
-                      Standard Clinical Rule: Never automatically contact emergency services without explicit user confirmation and an appropriately authorized integration.
-                    </p>
-                  </div>
-
-                  {/* Section 5: The Three Required Action Buttons */}
-                  <div className="pt-2 border-t border-slate-800 space-y-3">
-                    <div className="flex flex-col sm:flex-row items-center gap-3">
-                      
-                      {/* Button 1: [Confirm Emergency Action] */}
-                      <button
-                        onClick={handleConfirmEmergencyAction}
-                        disabled={currentAlert.actionResult === 'AUTHORIZED_EMERGENCY_DISPATCHED'}
-                        className={`w-full sm:flex-1 py-3.5 px-4 rounded-2xl font-bold text-xs md:text-sm flex items-center justify-center gap-2 shadow-xl transition-all ${
-                          currentAlert.actionResult === 'AUTHORIZED_EMERGENCY_DISPATCHED'
-                            ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
-                            : 'bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white shadow-rose-600/30 active:scale-98'
-                        }`}
-                      >
-                        <PhoneCall className="w-4 h-4" />
-                        <span>Confirm Emergency Action</span>
-                      </button>
-
-                      {/* Button 2: [Cancel] */}
-                      <button
-                        onClick={handleCancelAlert}
-                        className="w-full sm:w-auto py-3.5 px-5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs md:text-sm border border-slate-700 transition-colors flex items-center justify-center gap-2"
-                      >
-                        <XCircle className="w-4 h-4 text-slate-400" />
-                        <span>Cancel</span>
-                      </button>
-
-                      {/* Button 3: [I'm Safe] */}
-                      <button
-                        onClick={handleImSafe}
-                        className="w-full sm:w-auto py-3.5 px-5 rounded-2xl bg-emerald-950/60 hover:bg-emerald-900/60 text-emerald-300 font-bold text-xs md:text-sm border border-emerald-500/40 transition-colors flex items-center justify-center gap-2"
-                      >
-                        <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                        <span>I'm Safe</span>
-                      </button>
-
-                    </div>
-
-                    <div className="flex items-center justify-between text-[11px] text-slate-500 px-1">
-                      <span>Timestamp: {new Date(currentAlert.shownAt).toLocaleTimeString()}</span>
-                      <span>Action Result: <strong className="text-slate-300">{currentAlert.actionResult}</strong></span>
-                    </div>
-                  </div>
-
                 </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
+      {/* ==================================================================== */}
+      {/* TAB 4: EVENT & DELIVERY HISTORY */}
+      {/* ==================================================================== */}
+      {activeTab === 'history' && (
+        <div className="space-y-6">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-6">
+            <div>
+              <h2 className="text-base font-bold text-white flex items-center gap-2">
+                <FileText className="w-5 h-5 text-purple-400" />
+                Emergency Incident & Notification Delivery History
+              </h2>
+              <p className="text-xs text-slate-400">
+                Audited timeline of manual SOS triggers, automated alerts, contact deliveries, and responder acknowledgements.
+              </p>
+            </div>
+
+            {eventHistory.length === 0 ? (
+              <div className="text-center py-12 bg-slate-950/40 rounded-2xl border border-slate-800">
+                <CheckCircle2 className="w-10 h-10 text-emerald-400 mx-auto mb-2 opacity-80" />
+                <h3 className="text-sm font-bold text-white">Zero Active Emergency Incidents</h3>
+                <p className="text-xs text-slate-400 max-w-sm mx-auto mt-1">
+                  No emergency alerts or SOS activations recorded in your telemetry ledger.
+                </p>
               </div>
             ) : (
-              <div className="p-12 text-center bg-slate-900 border border-slate-800 rounded-3xl">
-                <CheckCircle2 className="w-12 h-12 text-emerald-400 mx-auto mb-3" />
-                <h3 className="text-base font-bold text-white">No Critical Patterns Active</h3>
-                <p className="text-xs text-slate-400 max-w-sm mx-auto mt-1 mb-4">
-                  All physiological biomarkers and ambient atmospheric parameters are currently within normal baseline tolerances.
-                </p>
-                <button
-                  onClick={() => handleTriggerNewPattern('hypoxia')}
-                  className="px-5 py-2.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold transition-colors"
-                >
-                  Simulate Critical Pattern
-                </button>
+              <div className="space-y-4">
+                {eventHistory.map((event) => (
+                  <div
+                    key={event.id}
+                    className="p-5 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-3"
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-bold text-white">{event.title}</span>
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase font-mono ${
+                            event.status === 'active'
+                              ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                              : event.status === 'acknowledged'
+                              ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                              : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                          }`}>
+                            {event.status}
+                          </span>
+                        </div>
+                        <div className="text-xs text-slate-400 mt-0.5">{event.reason}</div>
+                      </div>
+
+                      <div className="text-[11px] text-slate-400 font-mono">
+                        {new Date(event.triggeredAt).toLocaleString()}
+                      </div>
+                    </div>
+
+                    {/* Vitals Snapshot at Trigger */}
+                    <div className="flex flex-wrap gap-3 text-xs bg-slate-900/60 p-2.5 rounded-xl border border-slate-800/80">
+                      <span className="text-slate-400">
+                        Heart Rate: <strong className="text-white font-mono">{event.vitalsSnapshot.heartRate || '--'} bpm</strong>
+                      </span>
+                      <span className="text-slate-400">
+                        SpO2: <strong className="text-white font-mono">{event.vitalsSnapshot.spO2 || '--'}%</strong>
+                      </span>
+                      <span className="text-slate-400">
+                        BP: <strong className="text-white font-mono">{event.vitalsSnapshot.bloodPressure || '--'}</strong>
+                      </span>
+                      <span className="text-slate-400">
+                        PM2.5: <strong className="text-white font-mono">{event.environmentSnapshot.pm25 || '--'} µg/m³</strong>
+                      </span>
+                    </div>
+
+                    {/* Notification Receipts */}
+                    {event.notificationsDispatched.length > 0 && (
+                      <div className="text-xs space-y-1">
+                        <div className="text-slate-400 font-medium">Delivered Notifications:</div>
+                        <div className="flex flex-wrap gap-2">
+                          {event.notificationsDispatched.map((r, idx) => (
+                            <span key={idx} className="px-2 py-1 rounded bg-slate-800 text-[11px] text-slate-300 border border-slate-700 flex items-center gap-1.5">
+                              <Check className="w-3 h-3 text-emerald-400" />
+                              {r.contactName} ({r.channel}) — {r.status}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Acknowledgement Records */}
+                    {event.acknowledgements && event.acknowledgements.length > 0 && (
+                      <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-300">
+                        <strong>Acknowledged by:</strong> {event.acknowledgements.map((a) => `${a.acknowledgedBy} at ${new Date(a.acknowledgedAt).toLocaleTimeString()}${a.notes ? ` ("${a.notes}")` : ''}`).join(', ')}
+                      </div>
+                    )}
+
+                    {/* Action buttons if active */}
+                    {event.status === 'active' && (
+                      <div className="flex items-center gap-2 pt-2">
+                        <button
+                          onClick={() => setSelectedEventForAck(event)}
+                          className="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white font-semibold rounded-lg text-xs cursor-pointer"
+                        >
+                          Acknowledge Receipt
+                        </button>
+                        <button
+                          onClick={() => handleResolveEvent(event.id)}
+                          className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-lg text-xs cursor-pointer"
+                        >
+                          Resolve Incident
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
             )}
           </div>
+        </div>
+      )}
 
-          {/* Test & Simulation Sidebar (Span 1) */}
-          <div className="space-y-4">
-            
-            {/* Simulation & Rule Testing Panel */}
-            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                  <Activity className="w-4 h-4 text-rose-400" /> Pattern Testing & QA
-                </h3>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-mono">
-                  Sandbox
-                </span>
+      {/* ==================================================================== */}
+      {/* MODAL: ADD / EDIT EMERGENCY CONTACT */}
+      {/* ==================================================================== */}
+      {showContactModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4">
+            <h3 className="text-base font-bold text-white flex items-center gap-2">
+              <UserPlus className="w-5 h-5 text-emerald-400" />
+              {editingContact ? 'Edit Emergency Contact' : 'Register Emergency Contact'}
+            </h3>
+            <p className="text-xs text-slate-400">
+              Provide contact credentials and explicit consent for automated emergency notifications.
+            </p>
+
+            <form onSubmit={handleSaveContact} className="space-y-4 text-xs">
+              <div>
+                <label className="block text-slate-300 font-semibold mb-1">Full Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={contactName}
+                  onChange={(e) => setContactName(e.target.value)}
+                  placeholder="e.g. Sarah Vance"
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-emerald-500"
+                />
               </div>
 
-              <p className="text-xs text-slate-400">
-                Trigger configured rules to evaluate pattern detection, evidence presentation, and authorized action workflow:
-              </p>
-
-              {/* Trigger Buttons */}
-              <div className="space-y-2">
-                <button
-                  onClick={() => handleTriggerNewPattern('hypoxia')}
-                  className="w-full text-left p-3 rounded-2xl bg-slate-950 hover:bg-slate-800/80 border border-slate-800 text-xs transition-colors flex items-center justify-between"
+              <div>
+                <label className="block text-slate-300 font-semibold mb-1">Relationship</label>
+                <select
+                  value={contactRelation}
+                  onChange={(e) => setContactRelation(e.target.value as EmergencyRelationship)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-emerald-500"
                 >
-                  <div>
-                    <p className="font-semibold text-rose-300">Rule 1: Hypoxemic Spike</p>
-                    <p className="text-[11px] text-slate-500">SpO2 &lt; 90% + PM2.5 &gt; 18 µg/m³</p>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-slate-500" />
-                </button>
-
-                <button
-                  onClick={() => handleTriggerNewPattern('bradycardia')}
-                  className="w-full text-left p-3 rounded-2xl bg-slate-950 hover:bg-slate-800/80 border border-slate-800 text-xs transition-colors flex items-center justify-between"
-                >
-                  <div>
-                    <p className="font-semibold text-amber-300">Rule 2: Severe Bradycardia</p>
-                    <p className="text-[11px] text-slate-500">HR &lt; 40 BPM + Hypotension</p>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-slate-500" />
-                </button>
-
-                <button
-                  onClick={() => handleTriggerNewPattern('cardiac_strain')}
-                  className="w-full text-left p-3 rounded-2xl bg-slate-950 hover:bg-slate-800/80 border border-slate-800 text-xs transition-colors flex items-center justify-between"
-                >
-                  <div>
-                    <p className="font-semibold text-purple-300">Rule 3: Thermal Heat Strain</p>
-                    <p className="text-[11px] text-slate-500">HR &gt; 140 BPM + Temp &gt; 39°C</p>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-slate-500" />
-                </button>
+                  <option value="Spouse">Spouse</option>
+                  <option value="Parent">Parent</option>
+                  <option value="Child">Child</option>
+                  <option value="Sibling">Sibling</option>
+                  <option value="Physician">Physician / Cardiologist</option>
+                  <option value="Caregiver">Caregiver / Nurse</option>
+                  <option value="Friend">Friend / Colleague</option>
+                  <option value="Other">Other</option>
+                </select>
               </div>
 
-              {/* Network Failure Test Toggle */}
-              <div className="pt-3 border-t border-slate-800 space-y-3">
-                <h4 className="text-xs font-bold text-slate-300 flex items-center justify-between">
-                  <span>Test Network Failure</span>
-                  <label className="relative inline-flex items-center cursor-pointer">
+              <div>
+                <label className="block text-slate-300 font-semibold mb-1">Phone Number *</label>
+                <input
+                  type="tel"
+                  required
+                  value={contactPhone}
+                  onChange={(e) => setContactPhone(e.target.value)}
+                  placeholder="+1 (555) 019-2834"
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-300 font-semibold mb-1">Email (Optional)</label>
+                <input
+                  type="email"
+                  value={contactEmail}
+                  onChange={(e) => setContactEmail(e.target.value)}
+                  placeholder="sarah.vance@example.com"
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              <div className="space-y-2 pt-1 border-t border-slate-800">
+                <div className="text-slate-300 font-semibold">Notification Channels:</div>
+                <div className="flex items-center gap-4">
+                  <label className="flex items-center gap-1.5 cursor-pointer text-slate-300">
                     <input
                       type="checkbox"
-                      checked={simulateNetworkFailure}
-                      onChange={(e) => {
-                        setSimulateNetworkFailure(e.target.checked);
-                        showSnackbar?.(
-                          e.target.checked
-                            ? 'Simulating offline network failure on action confirm.'
-                            : 'Network restored to normal online state.'
-                        );
-                      }}
-                      className="sr-only peer"
+                      checked={contactPush}
+                      onChange={(e) => setContactPush(e.target.checked)}
+                      className="rounded bg-slate-950 border-slate-700 text-emerald-600"
                     />
-                    <div className="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-600"></div>
+                    Push
                   </label>
-                </h4>
-                <p className="text-[11px] text-slate-400 leading-normal">
-                  When enabled, confirms simulate an unreachable cloud gateway and tests the local encrypted SMS fallback queue.
-                </p>
+                  <label className="flex items-center gap-1.5 cursor-pointer text-slate-300">
+                    <input
+                      type="checkbox"
+                      checked={contactSms}
+                      onChange={(e) => setContactSms(e.target.checked)}
+                      className="rounded bg-slate-950 border-slate-700 text-emerald-600"
+                    />
+                    SMS
+                  </label>
+                  <label className="flex items-center gap-1.5 cursor-pointer text-slate-300">
+                    <input
+                      type="checkbox"
+                      checked={contactInApp}
+                      onChange={(e) => setContactInApp(e.target.checked)}
+                      className="rounded bg-slate-950 border-slate-700 text-emerald-600"
+                    />
+                    In-App
+                  </label>
+                </div>
               </div>
 
-              {/* Duplicate Alert Test Button */}
-              <div className="pt-3 border-t border-slate-800">
+              <label className="flex items-center gap-2 cursor-pointer text-slate-300 pt-1">
+                <input
+                  type="checkbox"
+                  checked={contactIsPrimary}
+                  onChange={(e) => setContactIsPrimary(e.target.checked)}
+                  className="rounded bg-slate-950 border-slate-700 text-emerald-600"
+                />
+                Designate as Primary Emergency Responder
+              </label>
+
+              {/* Explicit Legal Consent Checkbox */}
+              <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl">
+                <label className="flex items-start gap-2 cursor-pointer text-emerald-300 font-medium">
+                  <input
+                    type="checkbox"
+                    required
+                    checked={contactConsent}
+                    onChange={(e) => setContactConsent(e.target.checked)}
+                    className="mt-0.5 rounded bg-slate-950 border-emerald-500 text-emerald-600"
+                  />
+                  <span>
+                    I confirm that this person has given explicit consent to be registered as an emergency contact and receive telemetry alerts.
+                  </span>
+                </label>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
                 <button
-                  onClick={handleTestDuplicateAlert}
-                  className="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 border border-slate-700 flex items-center justify-center gap-2 transition-colors"
+                  type="button"
+                  onClick={() => setShowContactModal(false)}
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-xl text-xs transition-colors cursor-pointer"
                 >
-                  <Copy className="w-4 h-4 text-sky-400" />
-                  <span>Test Duplicate Alert Suppression</span>
+                  Cancel
                 </button>
-                <p className="text-[10px] text-slate-500 mt-1.5 text-center">
-                  Verifies suppression within 10-minute cooldown window.
-                </p>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs transition-colors shadow-lg shadow-emerald-600/30 cursor-pointer"
+                >
+                  Save Contact
+                </button>
               </div>
-
-            </div>
-
-            {/* In Case of Emergency (ICE) Passport Preview */}
-            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 space-y-3">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                Authorized Emergency Target
-              </h4>
-              <div className="p-3 bg-slate-950 rounded-2xl border border-slate-800 text-xs space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Primary Contact:</span>
-                  <span className="text-emerald-400 font-semibold">Sarah Vance (Spouse)</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">E.164 Phone:</span>
-                  <span className="text-slate-200 font-mono">+1 (555) 019-2834</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">EMS Dispatch:</span>
-                  <span className="text-rose-400 font-semibold">Authorized 911 PSAP</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Medical Passport:</span>
-                  <span className="text-slate-200">O+ Universal • Asthma</span>
-                </div>
-              </div>
-            </div>
-
-          </div>
-
-        </div>
-      )}
-
-      {/* TAB 2: STORED RECORDS (All alert fields stored) */}
-      {activeTab === 'records' && (
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-base font-bold text-white flex items-center gap-2">
-                <Database className="w-5 h-5 text-emerald-400" /> Stored Emergency Alerts
-              </h3>
-              <p className="text-xs text-slate-400">
-                Complete persisted records schema: alertId, userId, trigger, evidence, timestamps, and actionResult.
-              </p>
-            </div>
-            <span className="text-xs font-mono text-slate-400 bg-slate-950 px-3 py-1 rounded-xl border border-slate-800">
-              Total: {storedAlerts.length}
-            </span>
-          </div>
-
-          {storedAlerts.length === 0 ? (
-            <div className="p-12 text-center bg-slate-950 rounded-2xl border border-slate-800/80">
-              <FileText className="w-10 h-10 text-slate-600 mx-auto mb-2" />
-              <p className="text-xs text-slate-400">No past alerts stored yet.</p>
-              <p className="text-[11px] text-slate-500 mt-1">
-                Trigger and action an alert in the "Active Alert" tab to store records.
-              </p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs text-slate-300">
-                <thead className="bg-slate-950 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800">
-                  <tr>
-                    <th className="py-3 px-4">Alert ID</th>
-                    <th className="py-3 px-4">User ID</th>
-                    <th className="py-3 px-4">Trigger</th>
-                    <th className="py-3 px-4">Created At</th>
-                    <th className="py-3 px-4">Shown At</th>
-                    <th className="py-3 px-4">Confirmed At</th>
-                    <th className="py-3 px-4">Cancelled At</th>
-                    <th className="py-3 px-4">Action Result</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60 font-mono text-[11px]">
-                  {storedAlerts.map((record, index) => (
-                    <tr key={index} className="hover:bg-slate-800/40">
-                      <td className="py-3 px-4 font-bold text-rose-400">{record.alertId}</td>
-                      <td className="py-3 px-4 text-slate-300">{record.userId}</td>
-                      <td className="py-3 px-4 font-sans text-slate-200 max-w-xs truncate">
-                        {record.trigger}
-                      </td>
-                      <td className="py-3 px-4 text-slate-400">
-                        {new Date(record.createdAt).toLocaleTimeString()}
-                      </td>
-                      <td className="py-3 px-4 text-slate-400">
-                        {new Date(record.shownAt).toLocaleTimeString()}
-                      </td>
-                      <td className="py-3 px-4 text-emerald-400">
-                        {record.confirmedAt ? new Date(record.confirmedAt).toLocaleTimeString() : '—'}
-                      </td>
-                      <td className="py-3 px-4 text-amber-400">
-                        {record.cancelledAt ? new Date(record.cancelledAt).toLocaleTimeString() : '—'}
-                      </td>
-                      <td className="py-3 px-4">
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                            record.actionResult === 'AUTHORIZED_EMERGENCY_DISPATCHED'
-                              ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
-                              : record.actionResult === 'SAFE_CONFIRMED_BY_USER'
-                              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                              : record.actionResult === 'NETWORK_FAILURE_SMS_QUEUED'
-                              ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-                              : 'bg-slate-800 text-slate-400 border border-slate-700'
-                          }`}
-                        >
-                          {record.actionResult}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* TAB 3: AUDIT LOGS (HIPAA Compliance § 164.312(b)) */}
-      {activeTab === 'logs' && (
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-base font-bold text-white flex items-center gap-2">
-                <ShieldAlert className="w-5 h-5 text-amber-400" /> HIPAA Emergency Audit Trail
-              </h3>
-              <p className="text-xs text-slate-400">
-                Immutable chronological log of pattern triggers, presentations, explicit user confirmations, and network fallbacks.
-              </p>
-            </div>
-            <span className="text-xs font-mono text-slate-400 bg-slate-950 px-3 py-1 rounded-xl border border-slate-800">
-              {auditLogs.length} Events Logged
-            </span>
-          </div>
-
-          <div className="space-y-2.5">
-            {auditLogs.map((log) => (
-              <div
-                key={log.id}
-                className="p-3.5 bg-slate-950 rounded-2xl border border-slate-800/80 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs"
-              >
-                <div className="flex items-start gap-3">
-                  <div className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 shrink-0 mt-0.5">
-                    <FileText className="w-4 h-4 text-emerald-400" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2 font-mono">
-                      <span className="font-bold text-white">{log.action}</span>
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">
-                        {log.alertId}
-                      </span>
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-900 text-sky-400 border border-sky-500/20">
-                        {log.clientPlatform}
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-300 mt-1">{log.details}</p>
-                  </div>
-                </div>
-
-                <div className="text-right text-[11px] text-slate-500 font-mono shrink-0">
-                  {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                </div>
-              </div>
-            ))}
+            </form>
           </div>
         </div>
       )}
 
+      {/* ==================================================================== */}
+      {/* MODAL: ACKNOWLEDGE EMERGENCY EVENT */}
+      {/* ==================================================================== */}
+      {selectedEventForAck && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4">
+            <h3 className="text-base font-bold text-white flex items-center gap-2">
+              <CheckCircle2 className="w-5 h-5 text-amber-400" />
+              Acknowledge Emergency Alert
+            </h3>
+            <p className="text-xs text-slate-400">
+              Confirm that you have received this alert and record responder action notes for clinical audit.
+            </p>
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="block text-slate-300 font-semibold mb-1">Acknowledged By (Responder Name):</label>
+                <input
+                  type="text"
+                  value={ackResponderName}
+                  onChange={(e) => setAckResponderName(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-300 font-semibold mb-1">Action Notes / Status:</label>
+                <textarea
+                  rows={3}
+                  value={ackNotes}
+                  onChange={(e) => setAckNotes(e.target.value)}
+                  placeholder="e.g. Spoke with patient on phone, administering inhaler, physician notified."
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none resize-none"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
+                <button
+                  onClick={() => setSelectedEventForAck(null)}
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-xl text-xs cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleAcknowledgeEvent}
+                  className="px-5 py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl text-xs shadow-lg shadow-amber-600/30 cursor-pointer"
+                >
+                  Confirm Acknowledgement
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

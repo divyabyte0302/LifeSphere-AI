@@ -31,7 +31,11 @@ import {
   Navigation,
   Flame,
   Building2,
-  Compass
+  Compass,
+  Calendar,
+  LineChart,
+  LogOut,
+  ShieldCheck
 } from 'lucide-react';
 import { ScreenModule, HealthMetrics, EnvironmentalData, UserProfile } from '../../types';
 import { SyncStatusIndicator } from '../sync/SyncStatusIndicator';
@@ -42,8 +46,7 @@ interface AuthenticatedWebLayoutProps {
   onTriggerSos: () => void;
   deviceTier: 'desktop' | 'tablet' | 'mobile';
   user: UserProfile;
-  onOpenAdmin?: () => void;
-  onOpenDoctor?: () => void;
+  onLogout?: () => void;
   onNavigateToPublic?: () => void;
   children: React.ReactNode;
 }
@@ -54,8 +57,7 @@ export const AuthenticatedWebLayout: React.FC<AuthenticatedWebLayoutProps> = ({
   onTriggerSos,
   deviceTier,
   user,
-  onOpenAdmin,
-  onOpenDoctor,
+  onLogout,
   onNavigateToPublic,
   children,
 }) => {
@@ -63,24 +65,26 @@ export const AuthenticatedWebLayout: React.FC<AuthenticatedWebLayoutProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [notificationsOpen, setNotificationsOpen] = useState(false);
 
-  // The 15 LifeSphere AI-X Primary Modules organized into logical tiers
+  // The 15 LifeSphere AI-X Primary Modules organized into logical tiers (clean labels without serial numbers)
   const navItems: { id: ScreenModule; label: string; icon: React.ReactNode; category?: string }[] = [
-    { id: 'dashboard', label: '1. Main Dashboard', icon: <LayoutDashboard className="w-4 h-4 text-emerald-400" />, category: 'Core' },
-    { id: 'digital_twin', label: '2. AI Digital Twin', icon: <Cpu className="w-4 h-4 text-cyan-400" />, category: 'Core' },
-    { id: 'measurements', label: '3. Health Overview', icon: <HeartPulse className="w-4 h-4 text-rose-400" />, category: 'Core' },
+    { id: 'dashboard', label: 'Main Dashboard', icon: <LayoutDashboard className="w-4 h-4 text-emerald-400" />, category: 'Core' },
+    { id: 'checkup_calendar', label: 'Monthly Checkups', icon: <Calendar className="w-4 h-4 text-blue-400" />, category: 'Core' },
+    { id: 'health_analytics', label: 'Health Analytics', icon: <LineChart className="w-4 h-4 text-purple-400" />, category: 'Core' },
+    { id: 'digital_twin', label: 'AI Digital Twin', icon: <Cpu className="w-4 h-4 text-cyan-400" />, category: 'Core' },
+    { id: 'measurements', label: 'Health Overview', icon: <HeartPulse className="w-4 h-4 text-rose-400" />, category: 'Core' },
     { id: 'hydration', label: 'Hydration Tracker', icon: <Droplets className="w-4 h-4 text-cyan-400" />, category: 'Core' },
-    { id: 'medical_records', label: '4. Medical Records', icon: <FolderOpen className="w-4 h-4 text-purple-400" />, category: 'Core' },
-    { id: 'wearable', label: '5. Wearables & IoT', icon: <Watch className="w-4 h-4 text-cyan-400" />, category: 'Sensors' },
-    { id: 'environment', label: '6. Environment', icon: <CloudSun className="w-4 h-4 text-amber-400" />, category: 'Sensors' },
-    { id: 'fusion_engine', label: '7. Fusion Engine', icon: <Layers className="w-4 h-4 text-emerald-400" />, category: 'AI & ML' },
-    { id: 'ml_prediction', label: '8. ML Risk Prediction', icon: <TrendingUp className="w-4 h-4 text-purple-400" />, category: 'AI & ML' },
-    { id: 'life_risk_score', label: '9. Life Risk Score', icon: <Calculator className="w-4 h-4 text-cyan-400" />, category: 'AI & ML' },
-    { id: 'recommendations', label: '10. Recommendations', icon: <Sparkles className="w-4 h-4 text-amber-400" />, category: 'AI & ML' },
-    { id: 'safe_routes', label: '11. Safe Routes', icon: <Navigation className="w-4 h-4 text-emerald-400" />, category: 'Spatial' },
-    { id: 'community_hazards', label: '12. Community Hazards', icon: <Flame className="w-4 h-4 text-orange-400" />, category: 'Spatial' },
-    { id: 'city_analytics', label: '13. City Analytics', icon: <Building2 className="w-4 h-4 text-cyan-400" />, category: 'Spatial' },
-    { id: 'emergency', label: '14. Emergency SOS', icon: <AlertTriangle className="w-4 h-4 text-rose-500" />, category: 'Safety' },
-    { id: 'settings', label: '15. Settings & Audits', icon: <Settings className="w-4 h-4 text-slate-400" />, category: 'Safety' },
+    { id: 'medical_records', label: 'Medical Records', icon: <FolderOpen className="w-4 h-4 text-purple-400" />, category: 'Core' },
+    { id: 'wearable', label: 'Wearables & IoT', icon: <Watch className="w-4 h-4 text-cyan-400" />, category: 'Sensors' },
+    { id: 'environment', label: 'Environment', icon: <CloudSun className="w-4 h-4 text-amber-400" />, category: 'Sensors' },
+    { id: 'fusion_engine', label: 'Fusion Engine', icon: <Layers className="w-4 h-4 text-emerald-400" />, category: 'AI & ML' },
+    { id: 'ml_prediction', label: 'ML Risk Prediction', icon: <TrendingUp className="w-4 h-4 text-purple-400" />, category: 'AI & ML' },
+    { id: 'life_risk_score', label: 'Life Risk Score', icon: <Calculator className="w-4 h-4 text-cyan-400" />, category: 'AI & ML' },
+    { id: 'recommendations', label: 'Recommendations', icon: <Sparkles className="w-4 h-4 text-amber-400" />, category: 'AI & ML' },
+    { id: 'safe_routes', label: 'Safe Routes', icon: <Navigation className="w-4 h-4 text-emerald-400" />, category: 'Spatial' },
+    { id: 'community_hazards', label: 'Community Hazards', icon: <Flame className="w-4 h-4 text-orange-400" />, category: 'Spatial' },
+    { id: 'city_analytics', label: 'City Analytics', icon: <Building2 className="w-4 h-4 text-cyan-400" />, category: 'Spatial' },
+    { id: 'emergency', label: 'Emergency SOS', icon: <AlertTriangle className="w-4 h-4 text-rose-500" />, category: 'Safety' },
+    { id: 'settings', label: 'Settings & Audits', icon: <Settings className="w-4 h-4 text-slate-400" />, category: 'Safety' },
   ];
 
   const getSectionTitle = () => {
@@ -112,7 +116,7 @@ export const AuthenticatedWebLayout: React.FC<AuthenticatedWebLayoutProps> = ({
                 <span className="font-extrabold text-sm tracking-tight text-white block">
                   LIFESPHERE <span className="text-cyan-400">AI-X</span>
                 </span>
-                <span className="text-[10px] text-slate-400 block -mt-0.5 truncate">Academic Preventive Health ML</span>
+                <span className="text-[10px] text-cyan-400 font-medium block -mt-0.5 truncate">Smart Preventive Health System</span>
               </div>
             )}
           </div>
@@ -139,79 +143,55 @@ export const AuthenticatedWebLayout: React.FC<AuthenticatedWebLayoutProps> = ({
             })}
           </nav>
 
-          {/* Bottom Profile Widget & Admin / Doctor Portal Buttons */}
+          {/* Bottom Profile Widget & Secure Session Sign Out */}
           {!isTablet ? (
-            <div className="p-4 border-t border-slate-800 bg-slate-950/40 space-y-2">
-              <div className="grid grid-cols-2 gap-2">
-                {onOpenDoctor && (
-                  <button
-                    onClick={onOpenDoctor}
-                    className="py-2 px-2.5 rounded-xl bg-emerald-950/50 hover:bg-emerald-900/60 text-emerald-300 border border-emerald-500/30 text-[11px] font-bold flex items-center justify-center gap-1.5 transition-colors shadow-sm"
-                  >
-                    <Stethoscope className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                    <span className="truncate">Doctor Portal</span>
-                  </button>
-                )}
-                {onOpenAdmin && (
-                  <button
-                    onClick={onOpenAdmin}
-                    className="py-2 px-2.5 rounded-xl bg-indigo-950/50 hover:bg-indigo-900/60 text-indigo-300 border border-indigo-500/30 text-[11px] font-bold flex items-center justify-center gap-1.5 transition-colors shadow-sm"
-                  >
-                    <ShieldAlert className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-                    <span className="truncate">Admin Portal</span>
-                  </button>
-                )}
-              </div>
-
-              {onNavigateToPublic && (
-                <button
-                  onClick={onNavigateToPublic}
-                  className="w-full py-1.5 px-2.5 rounded-xl bg-slate-850 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-750 text-[11px] font-semibold flex items-center justify-center gap-1.5 transition-colors"
-                >
-                  <Globe className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-                  <span>Public Website</span>
-                </button>
-              )}
-
+            <div className="p-4 border-t border-slate-800 bg-slate-950/40 space-y-2.5">
               <div
                 onClick={() => onNavigate('profile')}
-                className="flex items-center gap-3 cursor-pointer hover:opacity-85 transition-opacity pt-1"
+                className="flex items-center gap-3 cursor-pointer hover:opacity-85 transition-opacity"
               >
-                <div className="w-9 h-9 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center font-bold text-xs">
+                <div className="w-9 h-9 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center font-bold text-xs shrink-0">
                   JV
                 </div>
-                <div className="overflow-hidden">
-                  <span className="text-xs font-bold text-white block truncate">{user.name}</span>
+                <div className="overflow-hidden flex-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-white block truncate">{user.name}</span>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-semibold border border-emerald-500/30">
+                      PATIENT
+                    </span>
+                  </div>
                   <span className="text-[10px] text-slate-400 block truncate">ID: #{user.id}</span>
                 </div>
               </div>
+
+              {onLogout && (
+                <button
+                  onClick={onLogout}
+                  className="w-full py-2 px-3 rounded-xl bg-slate-850 hover:bg-rose-950/40 text-slate-300 hover:text-rose-300 border border-slate-750 hover:border-rose-500/30 text-xs font-semibold flex items-center justify-center gap-2 transition-colors shadow-sm"
+                >
+                  <LogOut className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                  <span>Sign Out</span>
+                </button>
+              )}
             </div>
           ) : (
             <div className="p-3 border-t border-slate-800 flex flex-col items-center gap-2">
-              {onOpenDoctor && (
-                <button
-                  onClick={onOpenDoctor}
-                  title="Doctor Portal"
-                  className="w-8 h-8 rounded-xl bg-emerald-950/50 text-emerald-300 border border-emerald-500/30 flex items-center justify-center cursor-pointer hover:bg-emerald-900"
-                >
-                  <Stethoscope className="w-4 h-4 text-emerald-400" />
-                </button>
-              )}
-              {onOpenAdmin && (
-                <button
-                  onClick={onOpenAdmin}
-                  title="Admin Portal"
-                  className="w-8 h-8 rounded-xl bg-indigo-950/50 text-indigo-300 border border-indigo-500/30 flex items-center justify-center cursor-pointer hover:bg-indigo-900"
-                >
-                  <ShieldAlert className="w-4 h-4 text-indigo-400" />
-                </button>
-              )}
               <div
                 onClick={() => onNavigate('profile')}
-                className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xs cursor-pointer"
+                title={`${user.name} (Patient)`}
+                className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xs cursor-pointer border border-emerald-500/30"
               >
                 JV
               </div>
+              {onLogout && (
+                <button
+                  onClick={onLogout}
+                  title="Sign Out"
+                  className="w-8 h-8 rounded-xl bg-slate-850 hover:bg-rose-950 text-slate-400 hover:text-rose-300 border border-slate-750 flex items-center justify-center cursor-pointer transition-colors"
+                >
+                  <LogOut className="w-4 h-4 text-rose-400" />
+                </button>
+              )}
             </div>
           )}
         </aside>
@@ -394,43 +374,36 @@ export const AuthenticatedWebLayout: React.FC<AuthenticatedWebLayoutProps> = ({
             </nav>
 
             <div className="pt-3 border-t border-slate-800 space-y-2">
-              <div className="grid grid-cols-2 gap-2">
-                {onOpenDoctor && (
-                  <button
-                    onClick={() => {
-                      onOpenDoctor();
-                      setDrawerOpen(false);
-                    }}
-                    className="p-2 rounded-xl bg-emerald-950/50 text-emerald-300 border border-emerald-500/30 text-xs font-bold flex items-center justify-center gap-1.5"
-                  >
-                    <Stethoscope className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Doctor</span>
-                  </button>
-                )}
-                {onOpenAdmin && (
-                  <button
-                    onClick={() => {
-                      onOpenAdmin();
-                      setDrawerOpen(false);
-                    }}
-                    className="p-2 rounded-xl bg-indigo-950/50 text-indigo-300 border border-indigo-500/30 text-xs font-bold flex items-center justify-center gap-1.5"
-                  >
-                    <ShieldAlert className="w-3.5 h-3.5 text-indigo-400" />
-                    <span>Admin</span>
-                  </button>
-                )}
-              </div>
-
               <button
                 onClick={() => {
                   onNavigate('profile');
                   setDrawerOpen(false);
                 }}
-                className="w-full text-left text-xs text-slate-400 flex items-center justify-between p-2 rounded-xl bg-slate-950"
+                className="w-full text-left text-xs text-slate-300 flex items-center justify-between p-2.5 rounded-xl bg-slate-950 border border-slate-800"
               >
-                <span>Dr. Jordan Vance</span>
-                <span className="text-emerald-400 font-bold">Profile</span>
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-[10px]">
+                    JV
+                  </div>
+                  <span className="font-semibold text-white">{user.name}</span>
+                </div>
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold border border-emerald-500/30">
+                  PATIENT
+                </span>
               </button>
+
+              {onLogout && (
+                <button
+                  onClick={() => {
+                    onLogout();
+                    setDrawerOpen(false);
+                  }}
+                  className="w-full py-2.5 px-3 rounded-xl bg-slate-850 hover:bg-rose-950/40 text-slate-300 hover:text-rose-300 border border-slate-750 hover:border-rose-500/30 text-xs font-semibold flex items-center justify-center gap-2 transition-colors"
+                >
+                  <LogOut className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                  <span>Sign Out</span>
+                </button>
+              )}
             </div>
           </div>
         </div>

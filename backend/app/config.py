@@ -53,6 +53,17 @@ class Settings(BaseSettings):
         description="Enable simulated token verification for offline testing without network GCP access",
     )
 
+    # Emergency Notification Provider Configuration
+    twilio_account_sid: str = Field(default="", alias="TWILIO_ACCOUNT_SID", description="Twilio Account SID for SMS dispatch")
+    twilio_auth_token: str = Field(default="", alias="TWILIO_AUTH_TOKEN", description="Twilio Auth Token")
+    twilio_from_number: str = Field(default="", alias="TWILIO_FROM_NUMBER", description="Twilio outgoing phone number")
+    fcm_server_key: str = Field(default="", alias="FCM_SERVER_KEY", description="Firebase Cloud Messaging Server Key")
+    emergency_escalation_timeout_seconds: int = Field(
+        default=180,
+        alias="EMERGENCY_ESCALATION_TIMEOUT_SECONDS",
+        description="Timeout before unacknowledged primary emergency alerts escalate to secondary contacts",
+    )
+
     @property
     def allowed_origins(self) -> List[str]:
         """Parse comma-separated origin strings into a clean list."""

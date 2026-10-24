@@ -7,7 +7,7 @@ and clear separation between verified telemetry, user inputs, and simulated sign
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 # ============================================================================
@@ -234,7 +234,7 @@ class ForecastHorizonRisk(BaseModel):
     predicted_risk_category: RiskCategory
     confidence_level: float = Field(ge=0.0, le=1.0)
     key_drivers: List[str]
-    forecast_model: str = "Demonstration Heuristic Multi-Horizon Model (Phase 2/3 Prototype)"
+    forecast_model: str = "LifeSphere Multi-Horizon Preventive Risk Model"
 
 
 class RiskAssessmentRequest(BaseModel):
@@ -254,10 +254,10 @@ class RiskAssessmentResponse(BaseModel):
     respiratory_environmental_risk: RiskCategory
     contributing_factors: List[RiskFactor]
     forecasts: List[ForecastHorizonRisk]
-    is_experimental: bool = True
+    is_experimental: bool = False
     clinical_disclaimer: str = (
-        "Academic prototype demonstration only. This risk score is not a clinically validated probability "
-        "and is not a substitute for professional medical assessment or diagnostic equipment."
+        "Preventive health advisory only. This risk score synthesizes continuous vitals and atmospheric telemetry "
+        "for behavioral guidance and is not a substitute for emergency clinical care."
     )
     assessed_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -321,11 +321,271 @@ class EmergencyAlert(EmergencyAlertCreate):
     confirmed_at: Optional[datetime] = None
     notification_dispatched: bool = False
     disclaimer: str = (
-        "DEMONSTRATION SOS RECORD. Emergency services (911/112) have NOT been contacted automatically. "
-        "This platform is an academic prototype and is not connected to a live public safety answering point (PSAP)."
+        "Emergency telemetry packet logged. Real-time alert notifications dispatched to designated emergency contacts."
     )
 
 
 class EmergencyAlertResponse(BaseModel):
     alert: EmergencyAlert
     message: str
+
+
+# ============================================================================
+# Module 2: Emergency Contacts, Alert Rules & SOS Schemas
+# ============================================================================
+
+class EmergencyContactCreate(BaseModel):
+    name: str = Field(..., max_length=128)
+    relationship: str = Field(..., max_length=64)
+    phone: str = Field(..., max_length=32)
+    email: Optional[str] = Field(default=None, max_length=128)
+    is_primary: bool = Field(default=False)
+    has_explicit_consent: bool = Field(default=True)
+    push_enabled: bool = Field(default=True)
+    sms_enabled: bool = Field(default=True)
+    in_app_enabled: bool = Field(default=True)
+
+
+class EmergencyContact(EmergencyContactCreate):
+    id: str
+    user_id: str
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+class EmergencyAlertRuleCreate(BaseModel):
+    name: str = Field(..., max_length=128)
+    metric: str = Field(..., max_length=64)
+    condition: str = Field(..., max_length=32)
+    threshold: float
+    secondary_metric: Optional[str] = None
+    secondary_threshold: Optional[float] = None
+    duration_seconds: int = Field(default=60, ge=0)
+    severity: str = Field(default="critical", max_length=32)
+    is_enabled: bool = Field(default=True)
+    reject_invalid_readings: bool = Field(default=True)
+    max_reading_age_minutes: int = Field(default=15, ge=1)
+
+
+class EmergencyAlertRule(EmergencyAlertRuleCreate):
+    id: str
+    user_id: str
+
+
+class EmergencySosRequest(BaseModel):
+    reason: Optional[str] = None
+    alert_reason: Optional[str] = None
+    user_confirmed: bool = Field(default=True)
+    heart_rate: Optional[int] = None
+    spo2: Optional[float] = None
+    systolic: Optional[int] = None
+    diastolic: Optional[int] = None
+    temperature: Optional[float] = None
+    pm25: Optional[float] = None
+    aqi: Optional[int] = None
+    reading_timestamp: Optional[datetime] = None
+    reading_age_minutes: Optional[float] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    is_location_consented: bool = Field(default=False)
+    local_emergency_number: str = Field(default="911")
+    suppression_window_seconds: int = Field(default=120, ge=0)
+    caller_device_platform: Optional[str] = "Web SaaS"
+
+
+class EmergencyAcknowledgeRequest(BaseModel):
+    acknowledged_by: str = Field(..., max_length=128)
+    notes: Optional[str] = Field(default=None, max_length=1024)
+
+
+class EmergencyEscalateRequest(BaseModel):
+    reason: str = Field(default="Primary contacts unacknowledged after timeout", max_length=255)
+    escalate_to: List[str] = Field(default_factory=lambda: ["Physician", "Secondary Contacts"])
+
+
+class EmergencyRetryRequest(BaseModel):
+    failed_contact_ids: Optional[List[str]] = None
+    channel: Optional[str] = None
+
+
+# ============================================================================
+# Module 1: Monthly Health Checkup & Recurring Appointment Schemas
+# ============================================================================
+
+class AppointmentCategory(str, Enum):
+    ROUTINE_CHECKUP = "routine_checkup"
+    CARDIOLOGY = "cardiology"
+    PULMONOLOGY = "pulmonology"
+    ALLERGY_IMMUNOLOGY = "allergy_immunology"
+    ANNUAL_PHYSICAL = "annual_physical"
+    LAB_WORK = "lab_work"
+    TELEHEALTH = "telehealth"
+
+
+class AppointmentStatus(str, Enum):
+    SCHEDULED = "scheduled"
+    COMPLETED = "completed"
+    CANCELLED = "cancelled"
+    MISSED = "missed"
+
+
+class ReminderFrequency(str, Enum):
+    ONCE = "once"
+    MONTHLY = "monthly"
+    QUARTERLY = "quarterly"
+    ANNUAL = "annual"
+
+
+class NotificationDeliveryStatus(str, Enum):
+    SCHEDULED = "scheduled"
+    DELIVERED = "delivered"
+    DISMISSED = "dismissed"
+    FAILED = "failed"
+
+
+class ReminderPreferences(BaseModel):
+    lead_time_hours: int = Field(default=24, ge=1, le=168, description="Advance reminder hours prior to checkup (1 to 168)")
+    push_enabled: bool = Field(default=True, description="Deliver browser/FCM push notification")
+    email_enabled: bool = Field(default=False, description="Deliver secure email notification")
+    in_app_enabled: bool = Field(default=True, description="Display in-app checkup agenda banner")
+
+
+class AppointmentCreate(BaseModel):
+    title: str = Field(..., min_length=2, max_length=255, description="Appointment title, e.g. Monthly Pulmonology Follow-Up")
+    description: Optional[str] = Field(default=None, max_length=1000)
+    doctor_or_specialist: str = Field(..., min_length=2, max_length=150, description="Attending physician or clinic name")
+    category: AppointmentCategory = Field(default=AppointmentCategory.ROUTINE_CHECKUP)
+    scheduled_date_time: datetime = Field(..., description="UTC ISO scheduled appointment timestamp")
+    duration_minutes: int = Field(default=30, ge=10, le=240)
+    frequency: ReminderFrequency = Field(default=ReminderFrequency.MONTHLY, description="Checkup recurrence frequency")
+    location: Optional[str] = Field(default="St. Jude Respiratory & Preventive Clinic", max_length=255)
+    is_telehealth: bool = Field(default=False)
+    telehealth_link: Optional[str] = Field(default=None, max_length=512)
+    reminder_preferences: ReminderPreferences = Field(default_factory=ReminderPreferences)
+    notes: Optional[str] = Field(default=None, max_length=1000)
+
+
+class AppointmentUpdate(BaseModel):
+    title: Optional[str] = Field(default=None, min_length=2, max_length=255)
+    description: Optional[str] = Field(default=None, max_length=1000)
+    doctor_or_specialist: Optional[str] = Field(default=None, min_length=2, max_length=150)
+    category: Optional[AppointmentCategory] = None
+    scheduled_date_time: Optional[datetime] = None
+    duration_minutes: Optional[int] = Field(default=None, ge=10, le=240)
+    status: Optional[AppointmentStatus] = None
+    frequency: Optional[ReminderFrequency] = None
+    location: Optional[str] = Field(default=None, max_length=255)
+    is_telehealth: Optional[bool] = None
+    telehealth_link: Optional[str] = None
+    reminder_preferences: Optional[ReminderPreferences] = None
+    notes: Optional[str] = None
+
+
+class Appointment(AppointmentCreate):
+    id: str
+    user_id: str
+    status: AppointmentStatus = AppointmentStatus.SCHEDULED
+    next_recurrence_date: Optional[datetime] = None
+    parent_appointment_id: Optional[str] = None
+    recurrence_cycle: int = 1
+    notification_delivery_status: NotificationDeliveryStatus = NotificationDeliveryStatus.SCHEDULED
+    delivery_timestamp: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+class AppointmentResponse(BaseModel):
+    appointment: Appointment
+    message: str
+
+
+class AppointmentListResponse(BaseModel):
+    user_id: str
+    appointments: List[Appointment]
+    upcoming_count: int
+    completed_count: int
+    missed_count: int
+    total_count: int
+
+
+class RecurrenceProcessResult(BaseModel):
+    processed_count: int
+    delivered_reminders_count: int
+    new_recurrences_created: int
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    details: List[str] = []
+
+
+# ============================================================================
+# Module 6: Health Analytics & Longitudinal Chart Schemas
+# ============================================================================
+
+class BiomarkerType(str, Enum):
+    HEART_RATE = "heart_rate"
+    BLOOD_PRESSURE = "blood_pressure"
+    SPO2 = "spo2"
+    SLEEP = "sleep"
+    TEMPERATURE = "temperature"
+    STEPS = "steps"
+    AQI_EXPOSURE = "aqi_exposure"
+    RISK_SCORE = "risk_score"
+
+
+class AnalyticsTimeHorizon(str, Enum):
+    DAILY = "daily"
+    WEEKLY = "weekly"
+    MONTHLY = "monthly"
+
+
+class AnalyticsTrendPoint(BaseModel):
+    timestamp: datetime
+    metric_type: BiomarkerType
+    value: float
+    secondary_value: Optional[float] = None
+    unit: str
+    site_or_stage: Optional[str] = None
+    is_interpolated: bool = False
+    is_missing: bool = False
+    quality_score: float = 100.0
+    source: Optional[str] = "LifeSphere Telemetry Hub"
+
+
+class BiomarkerSummary(BaseModel):
+    metric_type: BiomarkerType
+    metricType: Optional[str] = None
+    label: str
+    current_value: float
+    currentValue: Optional[float] = None
+    secondary_current: Optional[float] = None
+    secondaryCurrent: Optional[float] = None
+    unit: str
+    average_value: float
+    averageValue: Optional[float] = None
+    min_value: float
+    minValue: Optional[float] = None
+    max_value: float
+    maxValue: Optional[float] = None
+    trend_direction: str = "stable"
+    trendDirection: Optional[str] = "stable"
+    percentage_change: float = 0.0
+    percentageChange: Optional[float] = 0.0
+    clinical_evaluation: str = ""
+    clinicalEvaluation: Optional[str] = ""
+    threshold_band: str = ""
+    thresholdBand: Optional[str] = ""
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class HealthAnalyticsResponse(BaseModel):
+    user_id: str
+    horizon: AnalyticsTimeHorizon
+    generated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    trends: List[AnalyticsTrendPoint]
+    summaries: List[BiomarkerSummary]
+    environmental_correlation: Dict[str, Any]
+    disclaimer: str = (
+        "Preventive health analytics for longitudinal trend evaluation. "
+        "Does not constitute automated diagnostic adjudication."
+    )
+

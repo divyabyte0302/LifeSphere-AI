@@ -3,9 +3,10 @@ import { TrendingUp, Activity, Wind, Moon, Calendar, ArrowUpRight, ArrowDownRigh
 
 interface TrendsViewProps {
   isMobile?: boolean;
+  onNavigateToAnalytics?: () => void;
 }
 
-export const TrendsView: React.FC<TrendsViewProps> = ({ isMobile }) => {
+export const TrendsView: React.FC<TrendsViewProps> = ({ isMobile, onNavigateToAnalytics }) => {
   const weeklyData = [
     { day: 'Mon', hrv: 62, aqi: 45, sleep: 7.8, note: 'Normal' },
     { day: 'Tue', hrv: 58, aqi: 68, sleep: 7.4, note: 'Moderate AQI' },
@@ -20,18 +21,30 @@ export const TrendsView: React.FC<TrendsViewProps> = ({ isMobile }) => {
     <div className={`p-4 ${isMobile ? 'space-y-4' : 'p-6 space-y-6 max-w-6xl mx-auto'}`}>
       
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/30">
-          <TrendingUp className="w-5 h-5" />
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/30">
+            <TrendingUp className="w-5 h-5" />
+          </div>
+          <div>
+            <h2 className="text-base md:text-lg font-bold text-white flex items-center gap-2">
+              Longitudinal Health & Atmospheric Trends
+            </h2>
+            <p className="text-xs text-slate-400">
+              Evaluating multi-day autonomic stress curves versus ambient pollution
+            </p>
+          </div>
         </div>
-        <div>
-          <h2 className="text-base md:text-lg font-bold text-white flex items-center gap-2">
-            Longitudinal Health & Atmospheric Trends
-          </h2>
-          <p className="text-xs text-slate-400">
-            Evaluating multi-day autonomic stress curves versus ambient pollution
-          </p>
-        </div>
+
+        {onNavigateToAnalytics && (
+          <button
+            onClick={onNavigateToAnalytics}
+            className="px-3.5 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-purple-600/30 flex items-center gap-1.5 cursor-pointer"
+          >
+            <TrendingUp className="w-4 h-4" />
+            <span>Open Health Analytics</span>
+          </button>
+        )}
       </div>
 
       {/* Hero Correlation Finding */}

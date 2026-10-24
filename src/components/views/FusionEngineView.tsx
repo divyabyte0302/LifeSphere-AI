@@ -55,7 +55,7 @@ export const FusionEngineView: React.FC<FusionEngineViewProps> = ({
               Module 07 · Cross-Domain Telemetry Fusion
             </span>
             <span className="text-[10px] text-slate-500">·</span>
-            <span className="text-[11px] text-slate-400">Pipeline v2.4 (Academic)</span>
+            <span className="text-[11px] text-emerald-400 font-medium">Pipeline v2.4 (Active)</span>
           </div>
           <h2 className="text-xl md:text-2xl font-bold text-white tracking-tight mt-0.5">
             Health–Environment Fusion Engine

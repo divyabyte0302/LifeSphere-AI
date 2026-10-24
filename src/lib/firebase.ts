@@ -13,26 +13,33 @@ import {
 } from 'firebase/firestore';
 import { HydrationLogEntry } from '../types/hydration';
 
+const env = (typeof import.meta !== 'undefined' && import.meta && import.meta.env) ? import.meta.env : (typeof process !== 'undefined' ? process.env : {}) as Record<string, string | undefined>;
+
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'AIzaSyFakeKeyForPreviewDevelopment_LifeSphere',
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'lifesphere-ai-production.firebaseapp.com',
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || 'lifesphere-ai-production',
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || 'lifesphere-ai-production.firebasestorage.app',
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '999251586362',
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || '1:999251586362:web:c45be9fc-a8f0-499e-8f6d-2365f44fe267',
+  apiKey: env.VITE_FIREBASE_API_KEY || 'AIzaSyFakeKeyForPreviewDevelopment_LifeSphere',
+  authDomain: env.VITE_FIREBASE_AUTH_DOMAIN || 'lifesphere-ai-production.firebaseapp.com',
+  projectId: env.VITE_FIREBASE_PROJECT_ID || 'lifesphere-ai-production',
+  storageBucket: env.VITE_FIREBASE_STORAGE_BUCKET || 'lifesphere-ai-production.firebasestorage.app',
+  messagingSenderId: env.VITE_FIREBASE_MESSAGING_SENDER_ID || '999251586362',
+  appId: env.VITE_FIREBASE_APP_ID || '1:999251586362:web:c45be9fc-a8f0-499e-8f6d-2365f44fe267',
 };
 
-let app: FirebaseApp;
+let app: FirebaseApp | undefined;
 let firestoreDb: Firestore | null = null;
 
-try {
-  app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
-  firestoreDb = getFirestore(app);
-} catch (err) {
-  console.warn('Firebase initialization note (offline/sandbox fallback enabled):', err);
+const isNodeCli = typeof window === 'undefined' && typeof process !== 'undefined';
+const isTestMode = isNodeCli || (typeof process !== 'undefined' && (process.env.NODE_ENV === 'test' || process.env.LIFESPHERE_TEST_MODE === 'true'));
+
+if (!isTestMode) {
+  try {
+    app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+    firestoreDb = getFirestore(app);
+  } catch (err) {
+    console.warn('Firebase initialization note (offline/sandbox fallback enabled):', err);
+  }
 }
 
-export { app, firestoreDb };
+export { app, firestoreDb, firestoreDb as db };
 
 /**
  * Persists a daily water intake record to Firestore collection: users/{uid}/hydration/{recordId}

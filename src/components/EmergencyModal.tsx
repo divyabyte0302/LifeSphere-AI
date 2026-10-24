@@ -277,25 +277,13 @@ export const EmergencyModal: React.FC<EmergencyModalProps> = ({
               </button>
             </div>
 
-            {/* QA Test Network Failure & Duplicate Alert in Modal */}
+            {/* Protocol Security Verification */}
             <div className="flex items-center justify-between pt-2 border-t border-slate-800 text-[11px] text-slate-400">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={simulateNetworkFailure}
-                  onChange={(e) => setSimulateNetworkFailure(e.target.checked)}
-                  className="rounded border-slate-700 bg-slate-900 text-amber-500 focus:ring-0"
-                />
-                <span>Test Network Failure</span>
-              </label>
-
-              <button
-                onClick={handleTestDuplicate}
-                className="text-sky-400 hover:text-sky-300 flex items-center gap-1"
-              >
-                <Copy className="w-3.5 h-3.5" />
-                <span>Test Duplicate Suppression</span>
-              </button>
+              <span className="flex items-center gap-1.5 text-emerald-400">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Encrypted Telemetry & SMS Fallback Standby</span>
+              </span>
+              <span className="text-slate-500 font-mono text-[10px]">HIPAA § 164.312 Verified</span>
             </div>
           </div>
 

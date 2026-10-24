@@ -130,7 +130,7 @@ export const ConsentView: React.FC<ConsentViewProps> = ({ isMobile }) => {
               Anonymized Epidemiological Research Pool
             </h4>
             <p className="text-xs text-slate-400">
-              Contributes de-identified particulate health trends to global academic research consortiums.
+              Contributes de-identified particulate health trends to global public health and clinical research consortiums.
             </p>
           </div>
           <button

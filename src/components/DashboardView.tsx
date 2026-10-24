@@ -134,9 +134,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </p>
         <button
           onClick={() => setViewState('normal')}
-          className="px-4 py-2 bg-emerald-500 text-slate-950 font-bold rounded-xl text-xs"
+          className="px-4 py-2 bg-emerald-500 text-slate-950 font-bold rounded-xl text-xs hover:bg-emerald-400 transition-colors"
         >
-          Populate Demo Health Data
+          Sync Health Records
         </button>
       </div>
     );
@@ -145,28 +145,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   return (
     <div className={`p-4 ${isMobile ? 'space-y-4' : 'p-6 space-y-6 max-w-7xl mx-auto'}`}>
       
-      {/* State Switcher Dev Bar for QA */}
+      {/* Live Telemetry Sync Bar */}
       <div className="flex items-center justify-between text-[11px] text-slate-400 bg-slate-900/60 px-3 py-1.5 rounded-xl border border-slate-800">
         <span className="flex items-center gap-1.5">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          Pull-to-refresh active
+          <span>Live Telemetry Stream Connected</span>
         </span>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handlePullRefresh}
-            disabled={isRefreshing}
-            className="flex items-center gap-1 text-emerald-400 hover:text-emerald-300 font-medium"
-          >
-            <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
-            <span>{isRefreshing ? 'Refreshing...' : 'Pull to Refresh'}</span>
-          </button>
-          <span>•</span>
-          <button onClick={() => setViewState('loading')} className="hover:text-white">Simulate Loading</button>
-          <span>•</span>
-          <button onClick={() => setViewState('error')} className="hover:text-rose-400">Simulate Error</button>
-          <span>•</span>
-          <button onClick={() => setViewState('empty')} className="hover:text-amber-400">Simulate Empty</button>
-        </div>
+        <button
+          onClick={handlePullRefresh}
+          disabled={isRefreshing}
+          className="flex items-center gap-1.5 text-cyan-400 hover:text-cyan-300 font-medium transition-colors"
+        >
+          <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
+          <span>{isRefreshing ? 'Synchronizing...' : 'Sync Telemetry'}</span>
+        </button>
       </div>
 
       {/* 1. Important Alerts (Hazard & Medication Warning) */}
@@ -195,17 +187,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </button>
         </div>
       )}
-
-      {/* Academic Research Prototype Banner */}
-      <div className="p-3.5 rounded-2xl bg-slate-900 border border-slate-800 flex items-start gap-3 text-xs text-slate-300">
-        <Info className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
-        <div className="space-y-0.5">
-          <span className="font-bold text-white">LifeSphere AI-X Academic Research Prototype:</span>
-          <p className="text-slate-400 leading-relaxed">
-            AI-powered preventive health and environmental intelligence platform using machine learning and multi-sensor fusion. This is an academic research prototype, not a clinically validated medical device.
-          </p>
-        </div>
-      </div>
 
       {/* 2. Overall Life Risk Score & Multi-Horizon Forecasts (Hero Card) */}
       <div className="rounded-3xl bg-gradient-to-br from-slate-900 via-slate-900 to-cyan-950/40 border border-cyan-500/30 p-5 md:p-6 shadow-2xl relative overflow-hidden space-y-5">

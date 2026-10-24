@@ -257,9 +257,9 @@ export const PublicAuthModals: React.FC<PublicAuthModalsProps> = ({
           </button>
         </form>
 
-        {/* Helper Test Notice */}
+        {/* Role Presets Notice */}
         <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 text-[10px] text-slate-400 font-mono text-center">
-          <span>Demo auto-fills ready for Patient, Doctor, and Admin roles.</span>
+          <span>Quick account access configured for Patient, Doctor, and Administrator roles.</span>
         </div>
 
       </div>

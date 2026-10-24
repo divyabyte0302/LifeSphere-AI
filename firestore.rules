@@ -57,6 +57,38 @@ service cloud.firestore {
         allow read: if isOwner(userId) || (isDoctor() && exists(/databases/$(database)/documents/patient_authorizations/$(request.auth.uid + '_' + userId)));
         allow create, update, delete: if isOwner(userId);
       }
+
+      // Scoped user telemetry measurements: users/{uid}/measurements/{measurementId}
+      match /measurements/{measurementId} {
+        allow read, write: if isOwner(userId) || (isDoctor() && exists(/databases/$(database)/documents/patient_authorizations/$(request.auth.uid + '_' + userId)));
+      }
+
+      // Scoped user appointments and recurring checkup reminders: users/{uid}/appointments/{appointmentId}
+      match /appointments/{appointmentId} {
+        allow read: if isOwner(userId) || (isDoctor() && exists(/databases/$(database)/documents/patient_authorizations/$(request.auth.uid + '_' + userId)));
+        allow create, update, delete: if isOwner(userId);
+      }
+
+      // Scoped user longitudinal health analytics records: users/{uid}/analytics_records/{recordId}
+      match /analytics_records/{recordId} {
+        allow read: if isOwner(userId) || (isDoctor() && exists(/databases/$(database)/documents/patient_authorizations/$(request.auth.uid + '_' + userId)));
+        allow create, update, delete: if isOwner(userId);
+      }
+
+      // Scoped user registered emergency contacts: users/{uid}/emergency_contacts/{contactId}
+      match /emergency_contacts/{contactId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      // Scoped user abnormal reading alert rules: users/{uid}/emergency_rules/{ruleId}
+      match /emergency_rules/{ruleId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      // Scoped user emergency events and acknowledgements: users/{uid}/emergency_events/{eventId}
+      match /emergency_events/{eventId} {
+        allow read, write: if isOwner(userId) || (isDoctor() && exists(/databases/$(database)/documents/patient_authorizations/$(request.auth.uid + '_' + userId)));
+      }
     }
 
     // =========================================================================

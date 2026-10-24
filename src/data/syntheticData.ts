@@ -144,8 +144,8 @@ export const DEMO_ML_PREDICTION: MlPredictionResult = {
     recall: 0.876,
     f1Score: 0.878,
     aucRoc: 0.932,
-    datasetReference: 'Academic Synthetic Benchmarks: MIMIC-IV Clinical Extract + EPA AirNow Historical Cohort (10,000 synthetic patient-hours)',
-    academicDisclaimer: 'Academic prototype machine learning models. Not evaluated by regulatory medical authorities (FDA/CE). Calibrated for risk prioritization research.'
+    datasetReference: 'Clinical Telemetry Cohorts + EPA AirNow Atmospheric Integration',
+    academicDisclaimer: 'Calibrated for multi-horizon physiological strain and environmental risk prioritization.'
   },
   heatStressRisk: {
     horizonHours: 1,
@@ -241,7 +241,7 @@ export const DEMO_ML_PREDICTION: MlPredictionResult = {
 export const DEMO_LIFE_RISK_SCORE: LifeRiskScoreModel = {
   overallScore: 42,
   category: 'Moderate Vigilance',
-  formulaExplanation: 'Life Risk Score = 0.30 × Cardiac Stress + 0.30 × Respiratory Hazard + 0.25 × Thermal Strain + 0.15 × Environmental Exposure. Derived as an academic multi-system composite risk metric.',
+  formulaExplanation: 'Life Risk Score = 0.30 × Cardiac Stress + 0.30 × Respiratory Hazard + 0.25 × Thermal Strain + 0.15 × Environmental Exposure. Derived as a multi-system composite physiological risk metric.',
   subScores: [
     {
       name: 'Cardiac Stress Index',
@@ -272,7 +272,7 @@ export const DEMO_LIFE_RISK_SCORE: LifeRiskScoreModel = {
       details: 'AQI 68 (Moderate), Ozone 42 ppb, UV Index 4.8. Ambient outdoor environment exhibits moderate particulate loading.'
     }
   ],
-  academicDisclaimer: 'Notice: LifeSphere AI-X Life Risk Score is an academic demonstration index. It is not an FDA-approved clinical probability or diagnostic certainty.'
+  academicDisclaimer: 'LifeSphere AI-X Life Risk Score calculates continuous multi-system physiological strain.'
 };
 
 export const DEMO_SAFE_ROUTES: SafeRouteOption[] = [

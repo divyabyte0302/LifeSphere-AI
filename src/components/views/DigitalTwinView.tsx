@@ -86,14 +86,6 @@ export const DigitalTwinView: React.FC<DigitalTwinViewProps> = ({
         </div>
       </div>
 
-      {/* Academic Prototype Notice */}
-      <div className="p-3.5 rounded-2xl bg-slate-900/90 border border-slate-800 flex items-start gap-3 text-xs text-slate-400">
-        <Info className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
-        <div>
-          <span className="font-semibold text-slate-300">Academic In-Silico Research Model:</span> The Personal AI Digital Twin models multi-compartment physiological responses based on synthetic continuous bio-telemetry and ambient micro-climate observations. It is not an FDA-approved clinical simulation device.
-        </div>
-      </div>
-
       {/* Top Digital Twin Vitals Mesh Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800">

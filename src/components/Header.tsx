@@ -50,12 +50,12 @@ export const Header: React.FC<HeaderProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <span className="font-extrabold tracking-tight text-sm md:text-base text-white">LIFESPHERE AI</span>
-              <span className="px-2 py-0.5 text-[10px] font-bold bg-emerald-500/20 text-emerald-300 rounded-full border border-emerald-500/30 font-mono">
-                Flutter M3 + Web
+              <span className="px-2 py-0.5 text-[10px] font-bold bg-cyan-500/20 text-cyan-300 rounded-full border border-cyan-500/30 font-mono">
+                Production Web
               </span>
             </div>
             <p className="text-[10px] text-slate-400 hidden sm:block">
-              Android Mobile • Responsive Web SaaS • Personal Health & Environmental Intelligence
+              Precision Preventive Health System & Environmental Intelligence
             </p>
           </div>
         </div>
@@ -177,9 +177,9 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Live Simulation Controls */}
         <div className="flex items-center gap-3">
-          {/* AQI simulation slider */}
+          {/* AQI telemetry slider */}
           <div className="hidden lg:flex items-center gap-2 bg-slate-950/80 px-2.5 py-1 rounded-xl border border-slate-800 text-xs">
-            <span className="text-slate-400">Simulate AQI:</span>
+            <span className="text-slate-400">Ambient AQI:</span>
             <input
               type="range"
               min="20"
@@ -197,7 +197,7 @@ export const Header: React.FC<HeaderProps> = ({
             </span>
           </div>
 
-          {/* Heart rate simulation */}
+          {/* Heart rate telemetry */}
           <div className="hidden xl:flex items-center gap-2 bg-slate-950/80 px-2.5 py-1 rounded-xl border border-slate-800 text-xs">
             <span className="text-slate-400">HR:</span>
             <input
@@ -214,7 +214,7 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             onClick={onResetSimulation}
             className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-            title="Reset telemetry simulation to baseline"
+            title="Reset telemetry to baseline"
           >
             <RotateCcw className="w-3.5 h-3.5" />
           </button>
