@@ -22,6 +22,7 @@ from app.api import (
     users,
     appointments,
     analytics,
+    wearables,
 )
 
 # Configure logging
@@ -121,4 +122,5 @@ app.include_router(emergency.router)
 app.include_router(users.router)
 app.include_router(appointments.router)
 app.include_router(analytics.router)
+app.include_router(wearables.router)
 
