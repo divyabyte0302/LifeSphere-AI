@@ -138,8 +138,11 @@ class UserProfileUpdate(BaseModel):
     qualifications: Optional[str] = Field(default=None)
     years_of_experience: Optional[int] = Field(default=None)
     medical_license_number: Optional[str] = Field(default=None)
-    clinic_address: Optional[str] = Field(default=None)
     consultation_fee: Optional[float] = Field(default=None)
+
+
+# ProfileUpdateSchema for strict validation of doctor and patient profile update requests
+ProfileUpdateSchema = UserProfileUpdate
 
 
 class UserProfile(UserProfileBase):

@@ -125,3 +125,24 @@ app.include_router(appointments.router)
 app.include_router(analytics.router)
 app.include_router(wearables.router)
 
+
+from app.schemas import ProfileUpdateSchema
+
+
+@app.post(
+    "/api/profile/update",
+    tags=["Profile Management"],
+    summary="Update User Profile (Main Entrypoint)",
+)
+async def main_profile_update(
+    payload: ProfileUpdateSchema,
+    current_user: dict = users.Depends(users.get_current_user),
+):
+    """Direct main application entrypoint for profile updates.
+
+    1. Extracts & verifies Firebase ID token from Authorization header (via get_current_user).
+    2. Uses ProfileUpdateSchema Pydantic model to strictly validate allowed fields based on role.
+    3. Scopes partial Firestore update strictly to users/{uid} for caller's own document.
+    """
+    return await users.update_profile_endpoint(payload=payload, current_user=current_user)
+
