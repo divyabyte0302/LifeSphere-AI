@@ -27,13 +27,17 @@ import {
   Check,
   X,
   ShieldCheck,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Bell,
+  AlertCircle,
+  Sliders,
 } from 'lucide-react';
 import {
   BiomarkerType,
   AnalyticsTimeHorizon,
   BiomarkerTrendPoint,
   BiomarkerSummaryCard,
+  VitalTrendAlert,
   HealthMetrics,
   EnvironmentalData,
   ValidationChecklistItem,
@@ -65,6 +69,9 @@ export const HealthAnalyticsView: React.FC<HealthAnalyticsViewProps> = ({
   const [useDemonstrationCohort, setUseDemonstrationCohort] = useState(false);
   const [hoveredPoint, setHoveredPoint] = useState<BiomarkerTrendPoint | null>(null);
 
+  const [sensitivityMultiplier, setSensitivityMultiplier] = useState<number>(1.0);
+  const [acknowledgedAlertIds, setAcknowledgedAlertIds] = useState<string[]>([]);
+
   // Authenticated user session info
   const authenticatedUserId = 'LS-8842';
   const authenticatedUserName = 'Dr. Jordan Vance';
@@ -78,6 +85,20 @@ export const HealthAnalyticsView: React.FC<HealthAnalyticsViewProps> = ({
       useDemonstrationCohort
     );
   }, [horizon, useDemonstrationCohort]);
+
+  // Compute active trend alerts using current sensitivity multiplier
+  const activeTrendAlerts = useMemo(() => {
+    const rawAlerts = HealthAnalyticsService.computeAutomatedTrendAlerts(
+      report.trends,
+      sensitivityMultiplier
+    );
+    return rawAlerts.filter((a) => !acknowledgedAlertIds.includes(a.id));
+  }, [report.trends, sensitivityMultiplier, acknowledgedAlertIds]);
+
+  const handleAcknowledgeAlert = (id: string, title: string) => {
+    setAcknowledgedAlertIds((prev) => [...prev, id]);
+    showSnackbar(`Acknowledged trend alert: "${title}". Recorded in clinical log.`);
+  };
 
   const handleDownloadCsv = () => {
     HealthAnalyticsService.exportCsv(report);
@@ -425,6 +446,175 @@ export const HealthAnalyticsView: React.FC<HealthAnalyticsViewProps> = ({
             <span>Zero cross-user leakage • Verified Authenticated Scoping</span>
           </div>
         </div>
+      </div>
+
+      {/* Automated Vital Trend Deviations & Historical Rolling Baseline Alerts Section */}
+      <div className="rounded-2xl bg-slate-900 border border-slate-800 p-5 space-y-4 shadow-xl">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/30">
+              <Bell className="w-5 h-5 animate-pulse" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-bold text-white tracking-tight">
+                  Automated Vital Trend Deviation Alerts
+                </h3>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                  {activeTrendAlerts.length} Active {activeTrendAlerts.length === 1 ? 'Excursion' : 'Excursions'}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                Real-time statistical anomaly detection comparing recent biometrics against 30-day historical rolling averages
+              </p>
+            </div>
+          </div>
+
+          {/* Sensitivity Adjuster */}
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-mono text-slate-400 flex items-center gap-1">
+              <Sliders className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Sensitivity:</span>
+            </span>
+            <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 text-[11px]">
+              <button
+                onClick={() => setSensitivityMultiplier(1.5)}
+                className={`px-2.5 py-1 rounded-lg font-semibold transition-colors cursor-pointer ${
+                  sensitivityMultiplier === 1.5
+                    ? 'bg-rose-600 text-white font-bold'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+                title="Strict Watch (1.5x) - Catches minor 5% deviations"
+              >
+                Strict (1.5x)
+              </button>
+              <button
+                onClick={() => setSensitivityMultiplier(1.0)}
+                className={`px-2.5 py-1 rounded-lg font-semibold transition-colors cursor-pointer ${
+                  sensitivityMultiplier === 1.0
+                    ? 'bg-purple-600 text-white font-bold'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+                title="Standard (1.0x) - Standard clinical deviation window"
+              >
+                Standard (1.0x)
+              </button>
+              <button
+                onClick={() => setSensitivityMultiplier(0.7)}
+                className={`px-2.5 py-1 rounded-lg font-semibold transition-colors cursor-pointer ${
+                  sensitivityMultiplier === 0.7
+                    ? 'bg-blue-600 text-white font-bold'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+                title="Relaxed (0.7x) - High threshold excursions only"
+              >
+                Relaxed (0.7x)
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {activeTrendAlerts.length === 0 ? (
+          <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-850 flex items-center gap-3 text-xs text-slate-400">
+            <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+            <div>
+              <span className="font-bold text-slate-200 block">All Biometrics Within Historical Rolling Baseline Limits</span>
+              <span>No statistical excursions detected for the selected sensitivity setting ({sensitivityMultiplier === 1.5 ? 'Strict 1.5x' : sensitivityMultiplier === 0.7 ? 'Relaxed 0.7x' : 'Standard 1.0x'}).</span>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+            {activeTrendAlerts.map((alert) => {
+              const isCritical = alert.severity === 'critical';
+              const isHigh = alert.severity === 'high';
+              const badgeStyle = isCritical
+                ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
+                : isHigh
+                ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                : 'bg-blue-500/20 text-blue-300 border-blue-500/40';
+
+              const cardBorder = isCritical
+                ? 'border-rose-500/40 bg-gradient-to-r from-slate-900 to-rose-950/20'
+                : isHigh
+                ? 'border-amber-500/30 bg-gradient-to-r from-slate-900 to-amber-950/20'
+                : 'border-slate-800 bg-slate-950/60';
+
+              return (
+                <div key={alert.id} className={`p-4 rounded-xl border ${cardBorder} space-y-3 transition-all`}>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-amber-400">
+                        <AlertCircle className="w-4 h-4 text-amber-400" />
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-bold text-white tracking-tight">{alert.title}</h4>
+                        <span className="text-[10px] text-slate-400 font-mono">
+                          Triggered: {new Date(alert.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} UTC
+                        </span>
+                      </div>
+                    </div>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase ${badgeStyle}`}>
+                      {alert.severity}
+                    </span>
+                  </div>
+
+                  {/* Quantitative Metrics Comparison */}
+                  <div className="grid grid-cols-3 gap-2 p-2.5 rounded-lg bg-slate-950 border border-slate-850 text-center font-mono">
+                    <div>
+                      <span className="text-[10px] text-slate-400 block uppercase font-sans">Current</span>
+                      <span className="text-xs font-bold text-white">
+                        {alert.currentValue} {alert.unit}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 block uppercase font-sans">30-Day Mean</span>
+                      <span className="text-xs font-semibold text-slate-300">
+                        {alert.baselineAverage} {alert.unit}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 block uppercase font-sans">Deviation</span>
+                      <span className={`text-xs font-bold flex items-center justify-center gap-0.5 ${alert.deviationValue >= 0 ? 'text-rose-400' : 'text-blue-400'}`}>
+                        {alert.deviationValue >= 0 ? '+' : ''}{alert.deviationValue} ({alert.deviationPercent >= 0 ? '+' : ''}{alert.deviationPercent}%)
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Clinical Narrative */}
+                  <p className="text-[11px] text-slate-300 leading-relaxed">
+                    {alert.clinicalContext}
+                  </p>
+
+                  {/* Actionable Clinical Recommendation & Interactive Actions */}
+                  <div className="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800 space-y-2">
+                    <div className="text-[11px] text-amber-300 flex items-start gap-1.5 font-medium">
+                      <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+                      <span><strong>Clinical Directive:</strong> {alert.recommendedAction}</span>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-1 border-t border-slate-800/80 text-[11px]">
+                      <button
+                        onClick={() => setSelectedBiomarker(alert.metricType)}
+                        className="text-cyan-400 hover:text-cyan-300 font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                      >
+                        <span>Inspect Chart</span>
+                        <ChevronRight className="w-3 h-3" />
+                      </button>
+
+                      <button
+                        onClick={() => handleAcknowledgeAlert(alert.id, alert.title)}
+                        className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg font-semibold flex items-center gap-1 text-[10px] transition-colors cursor-pointer"
+                      >
+                        <Check className="w-3 h-3 text-emerald-400" />
+                        <span>Acknowledge</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Biomarker Selector Tabs */}

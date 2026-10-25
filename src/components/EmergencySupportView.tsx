@@ -762,80 +762,100 @@ export const EmergencySupportView: React.FC<EmergencySupportViewProps> = ({
 
             {/* Contacts Table / Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {contacts.map((contact) => (
-                <div
-                  key={contact.id}
-                  className={`p-5 rounded-2xl bg-slate-950/60 border ${
-                    contact.isPrimary ? 'border-emerald-500/40 shadow-lg shadow-emerald-500/5' : 'border-slate-800'
-                  } space-y-3 relative`}
-                >
-                  {contact.isPrimary && (
-                    <span className="absolute top-4 right-4 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 uppercase">
-                      Primary Contact
-                    </span>
-                  )}
-
-                  <div>
-                    <h3 className="text-sm font-bold text-white">{contact.name}</h3>
-                    <div className="text-xs text-slate-400 font-medium">{contact.relationship}</div>
-                  </div>
-
-                  {/* Phone with privacy masking toggle */}
-                  <div className="flex items-center justify-between text-xs bg-slate-900/80 p-2 rounded-lg border border-slate-800">
-                    <span className="font-mono text-slate-300">{maskPhone(contact.phone, contact.id)}</span>
-                    <button
-                      onClick={() => togglePhoneMask(contact.id)}
-                      className="text-slate-400 hover:text-white p-1"
-                      title={revealedPhones[contact.id] ? 'Hide phone' : 'Show phone'}
-                    >
-                      {revealedPhones[contact.id] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                    </button>
-                  </div>
-
-                  {contact.email && (
-                    <div className="text-xs text-slate-400 truncate">
-                      Email: <span className="text-slate-300">{contact.email}</span>
-                    </div>
-                  )}
-
-                  {/* Channels */}
-                  <div className="flex items-center gap-1.5 pt-1">
-                    {contact.notificationPreferences.push && (
-                      <span className="px-2 py-0.5 rounded text-[10px] bg-slate-800 text-slate-300 border border-slate-700">Push</span>
-                    )}
-                    {contact.notificationPreferences.sms && (
-                      <span className="px-2 py-0.5 rounded text-[10px] bg-slate-800 text-slate-300 border border-slate-700">SMS</span>
-                    )}
-                    {contact.notificationPreferences.inApp && (
-                      <span className="px-2 py-0.5 rounded text-[10px] bg-slate-800 text-slate-300 border border-slate-700">In-App</span>
-                    )}
-                  </div>
-
-                  {/* Consent Badge */}
-                  <div className="text-[11px] text-emerald-400 flex items-center gap-1 pt-1">
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    Explicit Consent Verified
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800/80">
-                    <button
-                      onClick={() => openEditContact(contact)}
-                      className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg text-xs"
-                      title="Edit Contact"
-                    >
-                      <Settings2 className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={() => handleDeleteContact(contact.id)}
-                      className="p-1.5 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 rounded-lg text-xs"
-                      title="Remove Contact"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
+              {contacts.length === 0 ? (
+                <div className="col-span-full p-8 text-center rounded-2xl bg-slate-950/60 border border-slate-800 space-y-3">
+                  <Users className="w-10 h-10 text-slate-600 mx-auto" />
+                  <h4 className="text-sm font-bold text-white">No emergency contacts registered.</h4>
+                  <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                    Add a contact to configure emergency notifications and ensure instant alerts during medical events.
+                  </p>
+                  <button
+                    onClick={() => {
+                      resetContactForm();
+                      setShowContactModal(true);
+                    }}
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs inline-flex items-center gap-2 cursor-pointer"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    <span>Add First Emergency Contact</span>
+                  </button>
                 </div>
-              ))}
+              ) : (
+                contacts.map((contact) => (
+                  <div
+                    key={contact.id}
+                    className={`p-5 rounded-2xl bg-slate-950/60 border ${
+                      contact.isPrimary ? 'border-emerald-500/40 shadow-lg shadow-emerald-500/5' : 'border-slate-800'
+                    } space-y-3 relative`}
+                  >
+                    {contact.isPrimary && (
+                      <span className="absolute top-4 right-4 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 uppercase">
+                        Primary Contact
+                      </span>
+                    )}
+
+                    <div>
+                      <h3 className="text-sm font-bold text-white">{contact.name}</h3>
+                      <div className="text-xs text-slate-400 font-medium">{contact.relationship}</div>
+                    </div>
+
+                    {/* Phone with privacy masking toggle */}
+                    <div className="flex items-center justify-between text-xs bg-slate-900/80 p-2 rounded-lg border border-slate-800">
+                      <span className="font-mono text-slate-300">{maskPhone(contact.phone, contact.id)}</span>
+                      <button
+                        onClick={() => togglePhoneMask(contact.id)}
+                        className="text-slate-400 hover:text-white p-1"
+                        title={revealedPhones[contact.id] ? 'Hide phone' : 'Show phone'}
+                      >
+                        {revealedPhones[contact.id] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                      </button>
+                    </div>
+
+                    {contact.email && (
+                      <div className="text-xs text-slate-400 truncate">
+                        Email: <span className="text-slate-300">{contact.email}</span>
+                      </div>
+                    )}
+
+                    {/* Channels */}
+                    <div className="flex items-center gap-1.5 pt-1">
+                      {contact.notificationPreferences.push && (
+                        <span className="px-2 py-0.5 rounded text-[10px] bg-slate-800 text-slate-300 border border-slate-700">Push</span>
+                      )}
+                      {contact.notificationPreferences.sms && (
+                        <span className="px-2 py-0.5 rounded text-[10px] bg-slate-800 text-slate-300 border border-slate-700">SMS</span>
+                      )}
+                      {contact.notificationPreferences.inApp && (
+                        <span className="px-2 py-0.5 rounded text-[10px] bg-slate-800 text-slate-300 border border-slate-700">In-App</span>
+                      )}
+                    </div>
+
+                    {/* Consent Badge */}
+                    <div className="text-[11px] text-emerald-400 flex items-center gap-1 pt-1">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      Explicit Consent Verified
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800/80">
+                      <button
+                        onClick={() => openEditContact(contact)}
+                        className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg text-xs"
+                        title="Edit Contact"
+                      >
+                        <Settings2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteContact(contact.id)}
+                        className="p-1.5 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 rounded-lg text-xs"
+                        title="Remove Contact"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>

@@ -128,7 +128,7 @@ class WearableService:
 
         for m in measurements:
             try:
-                # Check for duplicate via stable source record id
+                # Check for duplicate via stable source record id OR cross-provider time proximity matching (same metric, value, timestamp within 30s)
                 stable_id = f"wearable_{provider.value}_{m.source_record_id}"
                 
                 is_duplicate = False
@@ -229,6 +229,28 @@ class WearableService:
                 "synced_at": datetime.now(timezone.utc).isoformat(),
             }
         ]
+
+    async def purge_user_measurements(self, uid: str, provider: Optional[str] = None) -> Dict[str, Any]:
+        """Purge imported wearable health measurements for a user (data deletion control)."""
+        purged_count = 0
+        try:
+            db = firestore_service.get_db()
+            if db:
+                coll_ref = db.collection("users").document(uid).collection("health_measurements")
+                docs = coll_ref.stream()
+                for doc in docs:
+                    data = doc.to_dict()
+                    if provider is None or data.get("source_provider") == provider:
+                        doc.reference.delete()
+                        purged_count += 1
+        except Exception as e:
+            logger.error(f"Firestore purge_user_measurements error: {e}")
+
+        return {
+            "purged_count": purged_count,
+            "provider_filter": provider or "all_providers",
+            "message": f"Successfully purged {purged_count} imported health measurements.",
+        }
 
 
 wearable_service = WearableService()

@@ -6,6 +6,7 @@ Provides:
 - DELETE /api/users/me: Purge user profile and all associated subcollection records.
 """
 
+from datetime import datetime, timezone
 from typing import Dict, Any
 from fastapi import APIRouter, Depends, status, HTTPException
 from app.dependencies.auth import get_current_user
@@ -54,12 +55,24 @@ async def update_my_profile(
     payload: UserProfileUpdate,
     current_user: Dict[str, Any] = Depends(get_current_user),
 ):
-    """Update profile attributes (display name, conditions, emergency contact)."""
+    """Update profile attributes with strict role-based permission enforcement."""
     uid = current_user["uid"]
-    existing = await firestore_service.get_user_profile(uid) or {"uid": uid}
+    existing = await firestore_service.get_user_profile(uid) or {
+        "uid": uid,
+        "email": current_user.get("email", ""),
+        "role": current_user.get("role", "USER"),
+    }
 
     update_data = payload.model_dump(exclude_unset=True)
-    merged = {**existing, **update_data}
+
+    # Backend Permission Enforcement: Prevent patients from claiming verified doctor credentials
+    user_role = existing.get("role", "USER")
+    if user_role != "DOCTOR" and user_role != "ADMIN":
+        # Strip doctor-specific credential fields if submitted by non-doctor
+        update_data.pop("medical_license_number", None)
+        update_data.pop("is_verified_doctor", None)
+
+    merged = {**existing, **update_data, "updated_at": datetime.now(timezone.utc).isoformat()}
 
     saved = await firestore_service.save_user_profile(uid, merged)
     return UserProfile(**saved)

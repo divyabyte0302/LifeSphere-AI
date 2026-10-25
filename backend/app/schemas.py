@@ -79,6 +79,27 @@ class UserProfileBase(BaseModel):
     hipaa_consent_given: bool = Field(default=True)
     emergency_contact_phone: Optional[str] = Field(default=None)
     emergency_contact_name: Optional[str] = Field(default=None)
+    photo_url: Optional[str] = Field(default=None)
+    phone_number: Optional[str] = Field(default=None)
+    
+    # Patient Specific Fields
+    date_of_birth: Optional[str] = Field(default=None)
+    gender: Optional[str] = Field(default=None)
+    height_cm: Optional[float] = Field(default=None, ge=30, le=280)
+    weight_kg: Optional[float] = Field(default=None, ge=2, le=500)
+    blood_type: Optional[str] = Field(default=None)
+    chronic_conditions: List[str] = Field(default_factory=list)
+    allergies: List[str] = Field(default_factory=list)
+
+    # Doctor Specific Fields
+    professional_title: Optional[str] = Field(default=None)
+    specialization: Optional[str] = Field(default=None)
+    qualifications: Optional[str] = Field(default=None)
+    years_of_experience: Optional[int] = Field(default=None, ge=0, le=70)
+    medical_license_number: Optional[str] = Field(default=None)
+    clinic_address: Optional[str] = Field(default=None)
+    consultation_fee: Optional[float] = Field(default=None, ge=0)
+    is_verified_doctor: bool = Field(default=False)
 
 
 class UserProfileUpdate(BaseModel):
@@ -87,6 +108,26 @@ class UserProfileUpdate(BaseModel):
     emergency_contact_phone: Optional[str] = Field(default=None)
     emergency_contact_name: Optional[str] = Field(default=None)
     hipaa_consent_given: Optional[bool] = None
+    photo_url: Optional[str] = Field(default=None)
+    phone_number: Optional[str] = Field(default=None)
+    
+    # Patient Fields
+    date_of_birth: Optional[str] = Field(default=None)
+    gender: Optional[str] = Field(default=None)
+    height_cm: Optional[float] = Field(default=None)
+    weight_kg: Optional[float] = Field(default=None)
+    blood_type: Optional[str] = Field(default=None)
+    chronic_conditions: Optional[List[str]] = Field(default=None)
+    allergies: Optional[List[str]] = Field(default=None)
+
+    # Doctor Fields
+    professional_title: Optional[str] = Field(default=None)
+    specialization: Optional[str] = Field(default=None)
+    qualifications: Optional[str] = Field(default=None)
+    years_of_experience: Optional[int] = Field(default=None)
+    medical_license_number: Optional[str] = Field(default=None)
+    clinic_address: Optional[str] = Field(default=None)
+    consultation_fee: Optional[float] = Field(default=None)
 
 
 class UserProfile(UserProfileBase):
@@ -617,6 +658,10 @@ class WearableMeasurementType(str, Enum):
     STEPS = "steps"
     ACTIVE_CALORIES = "active_calories"
     RESPIRATORY_RATE = "respiratory_rate"
+    RESTING_HEART_RATE = "resting_heart_rate"
+    STRESS_LEVEL = "stress_level"
+    DISTANCE_METERS = "distance_meters"
+    EXERCISE_SESSION = "exercise_session"
 
 
 class WearableConnectionStatus(str, Enum):

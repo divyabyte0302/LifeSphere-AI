@@ -184,10 +184,8 @@ export class EmergencyService {
       }
     }
 
-    // Default Seed
-    const initial = DEFAULT_SEED_CONTACTS.map((c) => ({ ...c, userId }));
-    localStorage.setItem(STORAGE_KEYS.CONTACTS(userId), JSON.stringify(initial));
-    return initial;
+    // Return empty list if no contacts exist
+    return [];
   }
 
   public async saveEmergencyContact(

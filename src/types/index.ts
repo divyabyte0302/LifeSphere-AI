@@ -599,6 +599,23 @@ export type BiomarkerType =
 
 export type AnalyticsTimeHorizon = 'daily' | 'weekly' | 'monthly';
 
+export interface VitalTrendAlert {
+  id: string;
+  metricType: BiomarkerType;
+  title: string;
+  severity: 'moderate' | 'high' | 'critical';
+  currentValue: number;
+  secondaryCurrentValue?: number;
+  baselineAverage: number;
+  secondaryBaselineAverage?: number;
+  deviationValue: number;
+  deviationPercent: number;
+  unit: string;
+  timestamp: string;
+  clinicalContext: string;
+  recommendedAction: string;
+}
+
 export interface BiomarkerTrendPoint {
   timestamp: string;
   metricType: BiomarkerType;

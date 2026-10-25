@@ -3,6 +3,7 @@ import {
   BiomarkerSummaryCard,
   AnalyticsTimeHorizon,
   BiomarkerType,
+  VitalTrendAlert,
 } from '../types';
 
 export interface HealthAnalyticsReport {
@@ -19,6 +20,7 @@ export interface HealthAnalyticsReport {
   qualityCoveragePercent: number;
   trends: BiomarkerTrendPoint[];
   summaries: BiomarkerSummaryCard[];
+  trendAlerts: VitalTrendAlert[];
   environmentalCorrelation: {
     highAqiDaysCount: number;
     hrvSuppressionPercentage: number;
@@ -284,6 +286,8 @@ export class HealthAnalyticsService {
       ),
     ];
 
+    const trendAlerts = this.computeAutomatedTrendAlerts(trends);
+
     return {
       horizon,
       generatedAt: now.toISOString(),
@@ -298,6 +302,7 @@ export class HealthAnalyticsService {
       qualityCoveragePercent: 99.2,
       trends,
       summaries,
+      trendAlerts,
       environmentalCorrelation: {
         highAqiDaysCount: 1,
         hrvSuppressionPercentage: -18.0,
@@ -310,6 +315,131 @@ export class HealthAnalyticsService {
         minimumDaysRequiredForClinicalSignificance: 14,
       },
     };
+  }
+
+  /**
+   * Computes automated trend alerts when vitals deviate significantly from rolling historical averages.
+   */
+  static computeAutomatedTrendAlerts(
+    trends: BiomarkerTrendPoint[],
+    sensitivityMultiplier: number = 1.0
+  ): VitalTrendAlert[] {
+    const alerts: VitalTrendAlert[] = [];
+
+    const evaluateMetric = (
+      metric: BiomarkerType,
+      title: string,
+      unit: string,
+      thresholdPercent: number,
+      clinicalContextBuilder: (latest: BiomarkerTrendPoint, avg: number, devPct: number) => string,
+      recommendationBuilder: (latest: BiomarkerTrendPoint, devPct: number) => string
+    ) => {
+      const pts = trends.filter((t) => t.metricType === metric && !t.isMissing);
+      if (pts.length < 2) return;
+
+      const values = pts.map((p) => p.value);
+      const sum = values.reduce((acc, v) => acc + v, 0);
+      const avg = +(sum / values.length).toFixed(1);
+      const latest = pts[pts.length - 1];
+
+      const diff = latest.value - avg;
+      const devPct = avg > 0 ? +((diff / avg) * 100).toFixed(1) : 0;
+      const effectiveThreshold = thresholdPercent / sensitivityMultiplier;
+
+      if (Math.abs(devPct) >= effectiveThreshold) {
+        const severity: 'critical' | 'high' | 'moderate' =
+          Math.abs(devPct) >= effectiveThreshold * 2.0
+            ? 'critical'
+            : Math.abs(devPct) >= effectiveThreshold * 1.3
+            ? 'high'
+            : 'moderate';
+
+        alerts.push({
+          id: `alert_${metric}_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+          metricType: metric,
+          title,
+          severity,
+          currentValue: latest.value,
+          secondaryCurrentValue: latest.secondaryValue,
+          baselineAverage: avg,
+          deviationValue: +diff.toFixed(1),
+          deviationPercent: devPct,
+          unit,
+          timestamp: latest.timestamp,
+          clinicalContext: clinicalContextBuilder(latest, avg, devPct),
+          recommendedAction: recommendationBuilder(latest, devPct),
+        });
+      }
+    };
+
+    // 1. Heart Rate & HRV Deviation Alert
+    evaluateMetric(
+      'heart_rate',
+      'Resting Heart Rate Tachycardic Elevation',
+      'bpm',
+      6.0,
+      (latest, avg, devPct) =>
+        `Resting heart rate (${latest.value} bpm) is +${(latest.value - avg).toFixed(1)} bpm (+${devPct}%) above historical rolling average (${avg} bpm). Vagal tone suppression observed.`,
+      (latest, devPct) =>
+        devPct > 12
+          ? 'Initiate 5-minute diaphragmatic breathing and remain seated. Re-assess vitals in 15 minutes. Consult care team if sustained >2 hours.'
+          : 'Monitor hydration and avoid high ambient particulate exposure until resting tone stabilizes.'
+    );
+
+    // 2. Blood Pressure Excursion Alert
+    evaluateMetric(
+      'blood_pressure',
+      'Vascular Blood Pressure Excursion',
+      'mmHg',
+      5.0,
+      (latest, avg, devPct) =>
+        `Systolic pressure (${latest.value} mmHg) is +${(latest.value - avg).toFixed(1)} mmHg (+${devPct}%) above historical baseline (${avg} mmHg). Diastolic recorded at ${latest.secondaryValue || 76} mmHg.`,
+      (latest) =>
+        latest.value >= 125
+          ? 'AHA Stage 1 Hypertension threshold exceeded. Minimize dietary sodium, pause intense exertion, and record a follow-up brachial cuff measurement in 30 minutes.'
+          : 'Continue routine blood pressure tracking and ensure adequate restful hydration.'
+    );
+
+    // 3. SpO2 Arterial Desaturation Alert
+    evaluateMetric(
+      'spo2',
+      'Arterial Oxygen Saturation Dip',
+      '%',
+      1.5,
+      (latest, avg, devPct) =>
+        `Arterial SpO2 dropped to ${latest.value}% (a ${devPct}% drop below baseline of ${avg}%).`,
+      (latest) =>
+        latest.value < 96
+          ? 'Hypoxemic warning: Ensure adequate ventilation, sit upright, and re-check pulse oximetry sensor alignment. Trigger Emergency SOS if dyspnea develops.'
+          : 'Maintain active respiratory surveillance and note bronchial irritation if outdoors.'
+    );
+
+    // 4. Ambient AQI Environmental Co-Exposure Spike Alert
+    evaluateMetric(
+      'aqi_exposure',
+      'Ambient Particulate Air Quality Spike',
+      'AQI',
+      20.0,
+      (latest, avg, devPct) =>
+        `Local air quality index spiked to ${latest.value} AQI (${latest.secondaryValue || 36.4} µg/m³ PM2.5), which is +${devPct}% above baseline (${avg} AQI).`,
+      (latest) =>
+        latest.value > 80
+          ? 'Unhealthy ambient AQI detected. Close windows, activate HEPA indoor air filtration, and avoid outdoor cardiovascular exercise.'
+          : 'Moderate air pollution warning. Sensitive individuals should limit prolonged outdoor exertion.'
+    );
+
+    // 5. Preventive Risk Score Escalation Alert
+    evaluateMetric(
+      'risk_score',
+      'Multi-Modal Preventive Risk Escalation',
+      'pts',
+      15.0,
+      (latest, avg, devPct) =>
+        `Preventive risk score escalated to ${latest.value} pts (a +${devPct}% increase over rolling average of ${avg} pts), driven by co-occurring environmental and physiological stressors.`,
+      () => 'Review AI Digital Twin recommendations and consider scheduling a monthly checkup update with your physician.'
+    );
+
+    return alerts;
   }
 
   /**
