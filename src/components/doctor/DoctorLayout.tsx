@@ -33,6 +33,7 @@ import { DoctorPatientListView } from './DoctorPatientListView';
 import { DoctorPatientDetailView } from './DoctorPatientDetailView';
 import { DoctorAuthorizationManager } from './DoctorAuthorizationManager';
 import { DoctorAuditLogsView } from './DoctorAuditLogsView';
+import { DoctorProfileEditor } from './DoctorProfileEditor';
 
 interface DoctorLayoutProps {
   onExitDoctorPortal: () => void;
@@ -48,7 +49,7 @@ export const DoctorLayout: React.FC<DoctorLayoutProps> = ({
   const [patientRecords, setPatientRecords] = useState<Record<string, DoctorPatientRecord>>(initialDoctorPatients);
   const [auditLogs, setAuditLogs] = useState<DoctorAccessAuditLog[]>(initialDoctorAccessAuditLogs);
   
-  const [currentView, setCurrentView] = useState<'patients' | 'patient_detail' | 'authorizations' | 'audit_logs'>('patients');
+  const [currentView, setCurrentView] = useState<'patients' | 'patient_detail' | 'authorizations' | 'audit_logs' | 'doctor_profile'>('patients');
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>('LS-8842');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -288,6 +289,21 @@ export const DoctorLayout: React.FC<DoctorLayoutProps> = ({
             <Clock className="w-3.5 h-3.5" />
             <span>Access Audit Logs</span>
           </button>
+
+          <button
+            onClick={() => {
+              setCurrentView('doctor_profile');
+              logAccess('DOCTOR_PROFILE_EDIT');
+            }}
+            className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
+              currentView === 'doctor_profile'
+                ? 'bg-emerald-600 text-white shadow-md'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Stethoscope className="w-3.5 h-3.5" />
+            <span>Doctor Profile</span>
+          </button>
         </div>
 
         {/* Right Exit Button */}
@@ -405,6 +421,10 @@ export const DoctorLayout: React.FC<DoctorLayoutProps> = ({
 
         {currentView === 'audit_logs' && (
           <DoctorAuditLogsView logs={auditLogs} doctor={doctor} />
+        )}
+
+        {currentView === 'doctor_profile' && (
+          <DoctorProfileEditor showSnackbar={showSnackbar} />
         )}
       </main>
 

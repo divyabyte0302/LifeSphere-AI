@@ -127,10 +127,31 @@ export default function App() {
   const handleLogout = () => {
     setAuthenticatedSession(null);
     localStorage.removeItem('lifesphere_auth_session');
+    setViewMode('public_web');
     showSnackbar('Signed out securely. Authentication required.');
   };
 
-  const [viewMode, setViewMode] = useState<ViewMode>('authenticated_web'); // Default to Desktop SaaS platform
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    const saved = localStorage.getItem('lifesphere_auth_session');
+    if (!saved) return 'public_web';
+    try {
+      const parsed = JSON.parse(saved);
+      if (parsed.role === 'ADMIN') return 'admin_portal';
+      if (parsed.role === 'DOCTOR') return 'doctor_portal';
+      return 'authenticated_web';
+    } catch {
+      return 'public_web';
+    }
+  });
+
+  // Client-side Route Guard for protected views
+  useEffect(() => {
+    const protectedViews: ViewMode[] = ['authenticated_web', 'doctor_portal', 'admin_portal', 'tablet_web', 'mobile_web'];
+    if (protectedViews.includes(viewMode) && !authenticatedSession) {
+      setViewMode('public_web');
+    }
+  }, [viewMode, authenticatedSession]);
+
   const [showTopHeader, setShowTopHeader] = useState(false); // Hidden from website by default per user request
   const [currentModule, setModule] = useState<ScreenModule>('dashboard');
   const [emergencyOpen, setEmergencyOpen] = useState(false);

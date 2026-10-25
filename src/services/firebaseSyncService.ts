@@ -4,7 +4,9 @@ import {
   FirebaseSyncConfig,
   SyncAuditLog,
   OfflineMutation,
-  SharedCheckupSubmission
+  SharedCheckupSubmission,
+  HealthMeasurementDoc,
+  WearableBatchItem,
 } from '../types/sync';
 import { MedicalRecordItem, Medication } from '../types';
 import { PatientTimelineEvent } from '../types/doctor';
@@ -18,6 +20,172 @@ export const sharedFirebaseConfig: FirebaseSyncConfig = {
   appId: '1:999251586362:web:c45be9fc-a8f0-499e-8f6d-2365f44fe267',
   activeUserId: 'LS-8842',
 };
+
+// Initial Shared Health Measurements (Firestore /users/{uid}/health_measurements/{measurementId})
+const initialSharedHealthMeasurements: HealthMeasurementDoc[] = [
+  {
+    id: 'wearable_android_health_connect_rec_spo2_01',
+    userId: 'LS-8842',
+    user_id: 'LS-8842',
+    measurementType: 'spo2',
+    measurement_type: 'spo2',
+    numericValue: 98.4,
+    numeric_value: 98.4,
+    secondaryValue: null,
+    secondary_value: null,
+    unit: '%',
+    measuredAt: '2026-10-25T05:30:00.000Z',
+    measured_at: '2026-10-25T05:30:00.000Z',
+    sourceProvider: 'android_health_connect',
+    source_provider: 'android_health_connect',
+    sourceDevice: 'Google Pixel 7 (Health Connect)',
+    source_device: 'Google Pixel 7 (Health Connect)',
+    sourceRecordId: 'rec_spo2_01',
+    source_record_id: 'rec_spo2_01',
+    provenance: { sensor: 'Optical Pulse Oximeter', accuracy: 'Clinical Grade' },
+    isMissing: false,
+    is_missing: false,
+    qualityScore: 1.0,
+    quality_score: 1.0,
+    importedAt: '2026-10-25T05:31:00.000Z',
+    imported_at: '2026-10-25T05:31:00.000Z',
+  },
+  {
+    id: 'wearable_android_health_connect_rec_bp_01',
+    userId: 'LS-8842',
+    user_id: 'LS-8842',
+    measurementType: 'blood_pressure',
+    measurement_type: 'blood_pressure',
+    numericValue: 118,
+    numeric_value: 118,
+    secondaryValue: 78,
+    secondary_value: 78,
+    unit: 'mmHg',
+    measuredAt: '2026-10-25T05:25:00.000Z',
+    measured_at: '2026-10-25T05:25:00.000Z',
+    sourceProvider: 'android_health_connect',
+    source_provider: 'android_health_connect',
+    sourceDevice: 'Google Pixel 7 (Health Connect)',
+    source_device: 'Google Pixel 7 (Health Connect)',
+    sourceRecordId: 'rec_bp_01',
+    source_record_id: 'rec_bp_01',
+    provenance: { cuffType: 'Automatic Oscillometric' },
+    isMissing: false,
+    is_missing: false,
+    qualityScore: 1.0,
+    quality_score: 1.0,
+    importedAt: '2026-10-25T05:26:00.000Z',
+    imported_at: '2026-10-25T05:26:00.000Z',
+  },
+  {
+    id: 'wearable_android_health_connect_rec_hr_01',
+    userId: 'LS-8842',
+    user_id: 'LS-8842',
+    measurementType: 'heart_rate',
+    measurement_type: 'heart_rate',
+    numericValue: 72,
+    numeric_value: 72,
+    secondaryValue: null,
+    secondary_value: null,
+    unit: 'bpm',
+    measuredAt: '2026-10-25T05:20:00.000Z',
+    measured_at: '2026-10-25T05:20:00.000Z',
+    sourceProvider: 'android_health_connect',
+    source_provider: 'android_health_connect',
+    sourceDevice: 'Google Pixel 7 (Health Connect)',
+    source_device: 'Google Pixel 7 (Health Connect)',
+    sourceRecordId: 'rec_hr_01',
+    source_record_id: 'rec_hr_01',
+    provenance: { PPG_channel: 'Green LED matrix' },
+    isMissing: false,
+    is_missing: false,
+    qualityScore: 1.0,
+    quality_score: 1.0,
+    importedAt: '2026-10-25T05:21:00.000Z',
+    imported_at: '2026-10-25T05:21:00.000Z',
+  },
+  {
+    id: 'wearable_android_health_connect_rec_hrv_01',
+    userId: 'LS-8842',
+    user_id: 'LS-8842',
+    measurementType: 'hrv',
+    measurement_type: 'hrv',
+    numericValue: 58,
+    numeric_value: 58,
+    secondaryValue: null,
+    secondary_value: null,
+    unit: 'ms',
+    measuredAt: '2026-10-25T04:45:00.000Z',
+    measured_at: '2026-10-25T04:45:00.000Z',
+    sourceProvider: 'android_health_connect',
+    source_provider: 'android_health_connect',
+    sourceDevice: 'Google Pixel 7 (Health Connect)',
+    source_device: 'Google Pixel 7 (Health Connect)',
+    sourceRecordId: 'rec_hrv_01',
+    source_record_id: 'rec_hrv_01',
+    provenance: { RMSSD: true },
+    isMissing: false,
+    is_missing: false,
+    qualityScore: 1.0,
+    quality_score: 1.0,
+    importedAt: '2026-10-25T04:46:00.000Z',
+    imported_at: '2026-10-25T04:46:00.000Z',
+  },
+  {
+    id: 'wearable_android_health_connect_rec_sleep_01',
+    userId: 'LS-8842',
+    user_id: 'LS-8842',
+    measurementType: 'sleep_session',
+    measurement_type: 'sleep_session',
+    numericValue: 7.5,
+    numeric_value: 7.5,
+    secondaryValue: 1.8,
+    secondary_value: 1.8,
+    unit: 'hours',
+    measuredAt: '2026-10-25T06:00:00.000Z',
+    measured_at: '2026-10-25T06:00:00.000Z',
+    sourceProvider: 'android_health_connect',
+    source_provider: 'android_health_connect',
+    sourceDevice: 'Google Pixel 7 (Health Connect)',
+    source_device: 'Google Pixel 7 (Health Connect)',
+    sourceRecordId: 'rec_sleep_01',
+    source_record_id: 'rec_sleep_01',
+    provenance: { deepSleepHours: 1.8, remSleepHours: 1.5, lightSleepHours: 4.2 },
+    isMissing: false,
+    is_missing: false,
+    qualityScore: 1.0,
+    quality_score: 1.0,
+    importedAt: '2026-10-25T06:01:00.000Z',
+    imported_at: '2026-10-25T06:01:00.000Z',
+  },
+  {
+    id: 'wearable_android_health_connect_rec_temp_01',
+    userId: 'LS-8842',
+    user_id: 'LS-8842',
+    measurementType: 'body_temperature',
+    measurement_type: 'body_temperature',
+    numericValue: 36.6,
+    numeric_value: 36.6,
+    secondaryValue: null,
+    secondary_value: null,
+    unit: '°C',
+    measuredAt: '2026-10-25T05:00:00.000Z',
+    measured_at: '2026-10-25T05:00:00.000Z',
+    sourceProvider: 'android_health_connect',
+    source_provider: 'android_health_connect',
+    sourceDevice: 'Google Pixel 7 (Health Connect)',
+    source_device: 'Google Pixel 7 (Health Connect)',
+    sourceRecordId: 'rec_temp_01',
+    source_record_id: 'rec_temp_01',
+    provenance: { sensor: 'Infrared Skin Thermistor' },
+    isMissing: false,
+    is_missing: false,
+    qualityScore: 1.0,
+    quality_score: 1.0,
+    importedAt: '2026-10-25T05:01:00.000Z',
+    imported_at: '2026-10-25T05:01:00.000Z',
+  },
+];
 
 // Initial Shared Medical Records (Firestore /medical_records/{recordId})
 const initialSharedRecords: MedicalRecordItem[] = [
@@ -125,6 +293,7 @@ class FirebaseSyncManager {
   private medications: Medication[] = [...initialSharedMedications];
   private timeline: PatientTimelineEvent[] = [...initialSharedTimeline];
   private checkups: SharedCheckupSubmission[] = [];
+  private healthMeasurements: HealthMeasurementDoc[] = [...initialSharedHealthMeasurements];
   
   private documentVersions: Record<string, number> = {};
   private processedHashes: Set<string> = new Set(); // Duplicate detection window
@@ -141,11 +310,13 @@ class FirebaseSyncManager {
   private timelineListeners: Set<(timeline: PatientTimelineEvent[]) => void> = new Set();
   private statusListeners: Set<(status: SyncStatus, lastSync: Date) => void> = new Set();
   private auditListeners: Set<(logs: SyncAuditLog[]) => void> = new Set();
+  private healthMeasurementListeners: Set<(measurements: HealthMeasurementDoc[]) => void> = new Set();
 
   constructor() {
     // Initialize version counters
-    this.records.forEach((r, idx) => (this.documentVersions[`record_${r.id}`] = 1));
-    this.medications.forEach((m, idx) => (this.documentVersions[`med_${m.id}`] = 1));
+    this.records.forEach((r) => (this.documentVersions[`record_${r.id}`] = 1));
+    this.medications.forEach((m) => (this.documentVersions[`med_${m.id}`] = 1));
+    this.healthMeasurements.forEach((h) => (this.documentVersions[`health_measurement_${h.id}`] = 1));
 
     // Browser network listeners
     if (typeof window !== 'undefined') {
@@ -164,7 +335,7 @@ class FirebaseSyncManager {
       targetDevice: 'android',
       collection: 'system',
       documentId: 'init',
-      details: 'Dual-platform Firebase real-time listeners initialized.',
+      details: 'Dual-platform Firebase real-time listeners initialized for records, medications, checkups, and health_measurements.',
       version: 1,
       latencyMs: 14,
     });
@@ -204,12 +375,28 @@ class FirebaseSyncManager {
     return () => this.auditListeners.delete(cb);
   }
 
+  public subscribeToHealthMeasurements(cb: (measurements: HealthMeasurementDoc[]) => void): () => void {
+    this.healthMeasurementListeners.add(cb);
+    cb([...this.healthMeasurements]);
+    return () => this.healthMeasurementListeners.delete(cb);
+  }
+
+  public getHealthMeasurements(userId?: string): HealthMeasurementDoc[] {
+    const targetUid = userId || sharedFirebaseConfig.activeUserId;
+    return this.healthMeasurements.filter((m) => m.userId === targetUid || m.user_id === targetUid);
+  }
+
   private notifyRecords() {
     this.recordListeners.forEach((cb) => cb([...this.records]));
   }
 
   private notifyMedications() {
+    this.medications;
     this.medicationListeners.forEach((cb) => cb([...this.medications]));
+  }
+
+  private notifyHealthMeasurements() {
+    this.healthMeasurementListeners.forEach((cb) => cb([...this.healthMeasurements]));
   }
 
   private notifyTimeline() {
@@ -579,6 +766,246 @@ class FirebaseSyncManager {
     };
   }
 
+  /**
+   * Batch ingestion flow for multi-type wearable measurements (SpO2, blood pressure, heart rate, HRV, sleep, body temp, etc.).
+   * Processes records idempotently, handles offline queueing, maps fields cleanly to Firestore health measurement schema,
+   * updates live subscriber state, and logs sync audit entries.
+   */
+  public async ingestWearableBatch({
+    userId,
+    connectionId,
+    provider = 'android_health_connect',
+    origin = 'android',
+    measurements,
+  }: {
+    userId?: string;
+    connectionId?: string;
+    provider?: string;
+    origin?: DevicePlatform;
+    measurements: WearableBatchItem[];
+  }): Promise<{
+    success: boolean;
+    status: 'success' | 'partial_success' | 'failed';
+    recordsImported: number;
+    recordsSkippedDuplicate: number;
+    recordsFailed: number;
+    importedMeasurements: HealthMeasurementDoc[];
+    message: string;
+  }> {
+    const startTime = performance.now();
+    const targetUserId = userId || sharedFirebaseConfig.activeUserId;
+    const connId = connectionId || `conn_${provider}_${targetUserId.slice(-4)}`;
+
+    let recordsImported = 0;
+    let recordsSkippedDuplicate = 0;
+    let recordsFailed = 0;
+    const newlyImported: HealthMeasurementDoc[] = [];
+
+    for (const item of measurements) {
+      try {
+        const rawRecId =
+          item.sourceRecordId ||
+          item.source_record_id ||
+          `rec_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+        const typeStr = item.measurementType || item.measurement_type || 'heart_rate';
+        const numVal =
+          item.numericValue !== undefined
+            ? item.numericValue
+            : item.numeric_value !== undefined
+            ? item.numeric_value
+            : 0;
+        const secVal =
+          item.secondaryValue !== undefined
+            ? item.secondaryValue
+            : item.secondary_value !== undefined
+            ? item.secondary_value
+            : null;
+
+        // Standardize units per record type if unspecified
+        let unitStr = item.unit;
+        if (!unitStr) {
+          switch (typeStr.toLowerCase()) {
+            case 'spo2':
+              unitStr = '%';
+              break;
+            case 'blood_pressure':
+              unitStr = 'mmHg';
+              break;
+            case 'heart_rate':
+            case 'resting_heart_rate':
+              unitStr = 'bpm';
+              break;
+            case 'hrv':
+              unitStr = 'ms';
+              break;
+            case 'sleep_session':
+              unitStr = 'hours';
+              break;
+            case 'body_temperature':
+            case 'skin_temperature':
+              unitStr = '°C';
+              break;
+            case 'steps':
+              unitStr = 'count';
+              break;
+            case 'active_calories':
+              unitStr = 'kcal';
+              break;
+            case 'respiratory_rate':
+              unitStr = 'breaths/min';
+              break;
+            case 'stress_level':
+              unitStr = 'score';
+              break;
+            case 'distance_meters':
+              unitStr = 'm';
+              break;
+            case 'exercise_session':
+              unitStr = 'mins';
+              break;
+            default:
+              unitStr = 'units';
+              break;
+          }
+        }
+
+        const stableDocId = `wearable_${provider}_${rawRecId}`;
+        const payloadHash = `hash_${provider}_${typeStr}_${rawRecId}_${numVal}_${secVal || ''}`;
+
+        // Deduplication check via stable document ID or payload hash window
+        const existingInStore = this.healthMeasurements.some(
+          (m) =>
+            m.id === stableDocId ||
+            m.sourceRecordId === rawRecId ||
+            m.source_record_id === rawRecId
+        );
+        if (this.processedHashes.has(payloadHash) || existingInStore) {
+          recordsSkippedDuplicate++;
+          continue;
+        }
+        this.processedHashes.add(payloadHash);
+
+        const timestampIso = item.measuredAt || item.measured_at || new Date().toISOString();
+        const devName =
+          item.sourceDeviceName ||
+          item.source_device_name ||
+          item.sourceDevice ||
+          item.source_device ||
+          `${provider.replace('_', ' ').toUpperCase()} Sensor`;
+
+        const healthDoc: HealthMeasurementDoc = {
+          id: stableDocId,
+          userId: targetUserId,
+          user_id: targetUserId,
+          measurementType: typeStr,
+          measurement_type: typeStr,
+          numericValue: numVal,
+          numeric_value: numVal,
+          secondaryValue: secVal,
+          secondary_value: secVal,
+          unit: unitStr,
+          measuredAt: timestampIso,
+          measured_at: timestampIso,
+          sourceProvider: provider,
+          source_provider: provider,
+          sourceDevice: devName,
+          source_device: devName,
+          sourceRecordId: rawRecId,
+          source_record_id: rawRecId,
+          provenance: item.provenanceMetadata || item.provenance || { ingestedVia: 'firebaseSyncService' },
+          isMissing: item.isMissing || item.is_missing || false,
+          is_missing: item.isMissing || item.is_missing || false,
+          qualityScore:
+            item.qualityScore !== undefined
+              ? item.qualityScore
+              : item.quality_score !== undefined
+              ? item.quality_score
+              : 1.0,
+          quality_score:
+            item.qualityScore !== undefined
+              ? item.qualityScore
+              : item.quality_score !== undefined
+              ? item.quality_score
+              : 1.0,
+          importedAt: new Date().toISOString(),
+          imported_at: new Date().toISOString(),
+        };
+
+        // Offline queueing if disconnected
+        if (!this.isOnline) {
+          this.offlineQueue.push({
+            id: `mut_${Date.now()}_${recordsImported}`,
+            collection: 'health_measurements',
+            documentId: stableDocId,
+            operation: 'CREATE',
+            payload: healthDoc,
+            timestamp: new Date().toISOString(),
+            originDevice: origin,
+            version: 1,
+            retryCount: 0,
+          });
+        }
+
+        this.healthMeasurements.unshift(healthDoc);
+        newlyImported.push(healthDoc);
+        recordsImported++;
+      } catch (err) {
+        recordsFailed++;
+      }
+    }
+
+    const latency = Math.round(performance.now() - startTime);
+    const statusStr =
+      recordsFailed === 0
+        ? 'success'
+        : recordsImported > 0
+        ? 'partial_success'
+        : 'failed';
+
+    if (recordsImported > 0) {
+      const typesSummary = Array.from(new Set(newlyImported.map((m) => m.measurementType))).join(', ');
+      const timelineEvent: PatientTimelineEvent = {
+        id: `EVT-WEARABLE-${Date.now().toString().slice(-4)}`,
+        timestamp: new Date().toISOString(),
+        title: `Wearable Batch Synchronized (${origin === 'android' ? 'Android Health Connect' : 'Web SaaS'})`,
+        category: 'PATIENT_LOG',
+        authorType: 'PATIENT',
+        authorName: `${provider} Stream`,
+        summary: `Batch ingestion complete: ${recordsImported} imported records (${typesSummary}). Idempotently mapped to /users/${targetUserId}/health_measurements.`,
+        isDoctorVerified: false,
+      };
+      this.timeline = [timelineEvent, ...this.timeline];
+      this.notifyTimeline();
+    }
+
+    this.lastSynchronizedAt = new Date();
+    this.syncStatus = this.isOnline ? 'SYNCED' : 'OFFLINE';
+
+    this.notifyHealthMeasurements();
+    this.notifyStatus();
+
+    this.logSyncAction({
+      action: 'INGEST_WEARABLE_BATCH',
+      originDevice: origin,
+      targetDevice: origin === 'android' ? 'web' : 'android',
+      collection: `users/${targetUserId}/health_measurements`,
+      documentId: connId,
+      details: `Ingested ${recordsImported} wearable measurements (${recordsSkippedDuplicate} duplicates skipped) into Firestore health_measurements.`,
+      version: 1,
+      latencyMs: latency,
+    });
+
+    return {
+      success: recordsFailed === 0 || recordsImported > 0,
+      status: statusStr,
+      recordsImported,
+      recordsSkippedDuplicate,
+      recordsFailed,
+      importedMeasurements: newlyImported,
+      message: `Ingested ${recordsImported} health records into Firestore /users/${targetUserId}/health_measurements.`,
+    };
+  }
+
   // =========================================================================
   // NETWORK & RECONCILIATION HANDLING (Offline, Reconnect, Conflicts)
   // =========================================================================
@@ -647,6 +1074,7 @@ class FirebaseSyncManager {
     this.notifyRecords();
     this.notifyMedications();
     this.notifyTimeline();
+    this.notifyHealthMeasurements();
     this.notifyStatus();
 
     this.logSyncAction({
@@ -695,6 +1123,69 @@ class FirebaseSyncManager {
       peakFlow: '530 L/min',
       inhalerPuffsUsed: 1,
       nocturnalAwakenings: 0,
+    });
+  }
+
+  public async simulateAndroidWearableBatchSync() {
+    const sampleBatch: WearableBatchItem[] = [
+      {
+        sourceRecordId: `rec_spo2_${Date.now()}`,
+        measurementType: 'spo2',
+        numericValue: 98.6,
+        unit: '%',
+        measuredAt: new Date().toISOString(),
+        sourceDeviceName: 'Google Pixel Watch 2 (Health Connect)',
+        provenanceMetadata: { sensor: 'Optical Pulse Ox', mode: 'Continuous Nocturnal' },
+        qualityScore: 0.98,
+      },
+      {
+        sourceRecordId: `rec_bp_${Date.now()}`,
+        measurementType: 'blood_pressure',
+        numericValue: 120,
+        secondaryValue: 80,
+        unit: 'mmHg',
+        measuredAt: new Date().toISOString(),
+        sourceDeviceName: 'Omron Platinum BLE Cuff',
+        provenanceMetadata: { cuffLocation: 'Left Upper Arm' },
+        qualityScore: 1.0,
+      },
+      {
+        sourceRecordId: `rec_hrv_${Date.now()}`,
+        measurementType: 'hrv',
+        numericValue: 62,
+        unit: 'ms',
+        measuredAt: new Date().toISOString(),
+        sourceDeviceName: 'Google Pixel Watch 2 (Health Connect)',
+        provenanceMetadata: { metric: 'rMSSD' },
+        qualityScore: 0.95,
+      },
+      {
+        sourceRecordId: `rec_sleep_${Date.now()}`,
+        measurementType: 'sleep_session',
+        numericValue: 7.8,
+        secondaryValue: 2.1,
+        unit: 'hours',
+        measuredAt: new Date().toISOString(),
+        sourceDeviceName: 'Google Pixel Watch 2 (Health Connect)',
+        provenanceMetadata: { deepSleep: '2.1 hrs', remSleep: '1.8 hrs' },
+        qualityScore: 1.0,
+      },
+      {
+        sourceRecordId: `rec_temp_${Date.now()}`,
+        measurementType: 'body_temperature',
+        numericValue: 36.7,
+        unit: '°C',
+        measuredAt: new Date().toISOString(),
+        sourceDeviceName: 'Google Pixel Watch 2 (Health Connect)',
+        provenanceMetadata: { sensor: 'Skin Temperature Sensor' },
+        qualityScore: 0.99,
+      },
+    ];
+
+    return this.ingestWearableBatch({
+      provider: 'android_health_connect',
+      origin: 'android',
+      measurements: sampleBatch,
     });
   }
 
@@ -752,9 +1243,11 @@ class FirebaseSyncManager {
       recordCount: this.records.length,
       medicationCount: this.medications.length,
       timelineCount: this.timeline.length,
+      healthMeasurementCount: this.healthMeasurements.length,
       records: [...this.records],
       medications: [...this.medications],
       timeline: [...this.timeline],
+      healthMeasurements: [...this.healthMeasurements],
       auditLogs: [...this.auditLogs],
     };
   }

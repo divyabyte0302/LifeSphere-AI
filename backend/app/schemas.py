@@ -81,6 +81,9 @@ class UserProfileBase(BaseModel):
     emergency_contact_name: Optional[str] = Field(default=None)
     photo_url: Optional[str] = Field(default=None)
     phone_number: Optional[str] = Field(default=None)
+    address: Optional[str] = Field(default=None)
+    pending_email: Optional[str] = Field(default=None)
+    email_verified: bool = Field(default=True)
     
     # Patient Specific Fields
     date_of_birth: Optional[str] = Field(default=None)
@@ -90,6 +93,9 @@ class UserProfileBase(BaseModel):
     blood_type: Optional[str] = Field(default=None)
     chronic_conditions: List[str] = Field(default_factory=list)
     allergies: List[str] = Field(default_factory=list)
+    emergency_preferences: Optional[Dict[str, Any]] = Field(default=None)
+    supported_health_preferences: Optional[Dict[str, Any]] = Field(default=None)
+    notification_preferences: Optional[Dict[str, Any]] = Field(default=None)
 
     # Doctor Specific Fields
     professional_title: Optional[str] = Field(default=None)
@@ -104,12 +110,15 @@ class UserProfileBase(BaseModel):
 
 class UserProfileUpdate(BaseModel):
     display_name: Optional[str] = Field(default=None, max_length=100)
+    email: Optional[str] = Field(default=None)
     primary_condition: Optional[str] = Field(default=None)
     emergency_contact_phone: Optional[str] = Field(default=None)
     emergency_contact_name: Optional[str] = Field(default=None)
     hipaa_consent_given: Optional[bool] = None
     photo_url: Optional[str] = Field(default=None)
     phone_number: Optional[str] = Field(default=None)
+    address: Optional[str] = Field(default=None)
+    pending_email: Optional[str] = Field(default=None)
     
     # Patient Fields
     date_of_birth: Optional[str] = Field(default=None)
@@ -119,6 +128,9 @@ class UserProfileUpdate(BaseModel):
     blood_type: Optional[str] = Field(default=None)
     chronic_conditions: Optional[List[str]] = Field(default=None)
     allergies: Optional[List[str]] = Field(default=None)
+    emergency_preferences: Optional[Dict[str, Any]] = Field(default=None)
+    supported_health_preferences: Optional[Dict[str, Any]] = Field(default=None)
+    notification_preferences: Optional[Dict[str, Any]] = Field(default=None)
 
     # Doctor Fields
     professional_title: Optional[str] = Field(default=None)
