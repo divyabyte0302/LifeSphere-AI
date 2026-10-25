@@ -249,7 +249,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </button>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-mono">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3 text-xs font-mono w-full min-w-0">
             <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800">
               <span className="text-[10px] text-slate-400 block">T + 1 Hour</span>
               <span className="text-base font-bold text-emerald-400 block mt-0.5">32 / 100</span>
@@ -295,85 +295,85 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </button>
         </div>
 
-        <div className={`grid gap-3 ${isMobile ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-3 md:grid-cols-5'}`}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 w-full min-w-0">
           {/* Heart Rate */}
           <div
             onClick={() => setScreen('measurements')}
-            className="rounded-2xl bg-slate-900 border border-slate-800 hover:border-rose-500/40 p-4 cursor-pointer transition-all"
+            className="rounded-2xl bg-slate-900 border border-slate-800 hover:border-rose-500/40 p-4 cursor-pointer transition-all min-w-0 overflow-hidden"
           >
             <div className="flex justify-between items-center text-xs text-slate-400 mb-1">
-              <span>Heart Rate</span>
-              <Heart className="w-3.5 h-3.5 text-rose-400" />
+              <span className="truncate">Heart Rate</span>
+              <Heart className="w-3.5 h-3.5 text-rose-400 shrink-0" />
             </div>
             <div className="flex items-baseline gap-1">
               <span className="text-2xl font-bold text-white">{vitals.heartRate}</span>
               <span className="text-[11px] text-slate-400 font-mono">BPM</span>
             </div>
-            <span className="text-[10px] text-emerald-400 block mt-1">Resting: {vitals.restingHeartRate} BPM</span>
+            <span className="text-[10px] text-emerald-400 block mt-1 truncate">Resting: {vitals.restingHeartRate} BPM</span>
           </div>
 
           {/* Blood Pressure */}
           <div
             onClick={() => setScreen('measurements')}
-            className="rounded-2xl bg-slate-900 border border-slate-800 hover:border-blue-500/40 p-4 cursor-pointer transition-all"
+            className="rounded-2xl bg-slate-900 border border-slate-800 hover:border-blue-500/40 p-4 cursor-pointer transition-all min-w-0 overflow-hidden"
           >
             <div className="flex justify-between items-center text-xs text-slate-400 mb-1">
-              <span>Blood Pressure</span>
-              <Activity className="w-3.5 h-3.5 text-blue-400" />
+              <span className="truncate">Blood Pressure</span>
+              <Activity className="w-3.5 h-3.5 text-blue-400 shrink-0" />
             </div>
             <div className="flex items-baseline gap-1">
               <span className="text-2xl font-bold text-white">{vitals.bloodPressure}</span>
               <span className="text-[11px] text-slate-400 font-mono">mmHg</span>
             </div>
-            <span className="text-[10px] text-emerald-400 block mt-1">Normal Systolic</span>
+            <span className="text-[10px] text-emerald-400 block mt-1 truncate">Normal Systolic</span>
           </div>
 
           {/* SpO2 */}
           <div
             onClick={() => setScreen('measurements')}
-            className="rounded-2xl bg-slate-900 border border-slate-800 hover:border-cyan-500/40 p-4 cursor-pointer transition-all"
+            className="rounded-2xl bg-slate-900 border border-slate-800 hover:border-cyan-500/40 p-4 cursor-pointer transition-all min-w-0 overflow-hidden"
           >
             <div className="flex justify-between items-center text-xs text-slate-400 mb-1">
-              <span>Blood Oxygen</span>
-              <Droplets className="w-3.5 h-3.5 text-cyan-400" />
+              <span className="truncate">Blood Oxygen</span>
+              <Droplets className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
             </div>
             <div className="flex items-baseline gap-1">
               <span className="text-2xl font-bold text-white">{vitals.spO2.toFixed(1)}</span>
               <span className="text-[11px] text-slate-400 font-mono">%</span>
             </div>
-            <span className="text-[10px] text-emerald-400 block mt-1">Optimal Saturation</span>
+            <span className="text-[10px] text-emerald-400 block mt-1 truncate">Optimal Saturation</span>
           </div>
 
           {/* Blood Glucose */}
           <div
             onClick={() => setScreen('measurements')}
-            className="rounded-2xl bg-slate-900 border border-slate-800 hover:border-purple-500/40 p-4 cursor-pointer transition-all"
+            className="rounded-2xl bg-slate-900 border border-slate-800 hover:border-purple-500/40 p-4 cursor-pointer transition-all min-w-0 overflow-hidden"
           >
             <div className="flex justify-between items-center text-xs text-slate-400 mb-1">
-              <span>Blood Glucose</span>
-              <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+              <span className="truncate">Blood Glucose</span>
+              <Sparkles className="w-3.5 h-3.5 text-purple-400 shrink-0" />
             </div>
             <div className="flex items-baseline gap-1">
               <span className="text-2xl font-bold text-white">{vitals.glucose}</span>
               <span className="text-[11px] text-slate-400 font-mono">mg/dL</span>
             </div>
-            <span className="text-[10px] text-emerald-400 block mt-1">Fasting Normal</span>
+            <span className="text-[10px] text-emerald-400 block mt-1 truncate">Fasting Normal</span>
           </div>
 
           {/* Body Temperature */}
           <div
             onClick={() => setScreen('measurements')}
-            className="rounded-2xl bg-slate-900 border border-slate-800 hover:border-amber-500/40 p-4 cursor-pointer transition-all"
+            className="rounded-2xl bg-slate-900 border border-slate-800 hover:border-amber-500/40 p-4 cursor-pointer transition-all min-w-0 overflow-hidden"
           >
             <div className="flex justify-between items-center text-xs text-slate-400 mb-1">
-              <span>Core Temp</span>
-              <Sun className="w-3.5 h-3.5 text-amber-400" />
+              <span className="truncate">Core Temp</span>
+              <Sun className="w-3.5 h-3.5 text-amber-400 shrink-0" />
             </div>
             <div className="flex items-baseline gap-1">
               <span className="text-2xl font-bold text-white">{vitals.bodyTemperature}</span>
               <span className="text-[11px] text-slate-400 font-mono">°C</span>
             </div>
-            <span className="text-[10px] text-emerald-400 block mt-1">Afebrile</span>
+            <span className="text-[10px] text-emerald-400 block mt-1 truncate">Afebrile</span>
           </div>
         </div>
       </section>
@@ -389,10 +389,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       </section>
 
       {/* 4. Environmental Exposure & 5. Health Trends (Two Column Layout) */}
-      <div className="grid md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 w-full min-w-0">
         
         {/* Environmental Exposure */}
-        <div className="rounded-2xl bg-slate-900 border border-slate-800 p-5 space-y-3">
+        <div className="rounded-2xl bg-slate-900 border border-slate-800 p-4 sm:p-5 space-y-3 min-w-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Wind className="w-4 h-4 text-amber-400" />
@@ -406,7 +406,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </button>
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full min-w-0">
             <div className={`p-3 rounded-xl border ${aqiStyle.bg} ${aqiStyle.border}`}>
               <span className="text-[11px] text-slate-400 block">Air Quality Index</span>
               <span className={`text-2xl font-bold ${aqiStyle.text}`}>{environment.airQualityIndex}</span>
@@ -483,7 +483,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       </div>
 
       {/* 6. Upcoming Monthly Check-up & 7. Medication Summary */}
-      <div className="grid md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 w-full min-w-0">
         
         {/* Upcoming Monthly Check-up Card */}
         <div className="rounded-2xl bg-slate-900 border border-slate-800 p-5 flex flex-col justify-between">
@@ -562,7 +562,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       </div>
 
       {/* 8. Latest Recommendations & 9. Latest Health Report */}
-      <div className="grid md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 w-full min-w-0">
         
         {/* Latest Recommendations Card */}
         <div className="rounded-2xl bg-slate-900 border border-slate-800 p-5 space-y-3">

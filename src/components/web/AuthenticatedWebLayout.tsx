@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Activity,
   Droplets,
@@ -96,12 +96,27 @@ export const AuthenticatedWebLayout: React.FC<AuthenticatedWebLayoutProps> = ({
   const isTablet = deviceTier === 'tablet';
   const isMobile = deviceTier === 'mobile';
 
+  // Lock body scroll and listen for Escape key when mobile drawer is open
+  useEffect(() => {
+    if (drawerOpen) {
+      document.body.style.overflow = 'hidden';
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') setDrawerOpen(false);
+      };
+      window.addEventListener('keydown', handleKeyDown);
+      return () => {
+        document.body.style.overflow = '';
+        window.removeEventListener('keydown', handleKeyDown);
+      };
+    }
+  }, [drawerOpen]);
+
   return (
-    <div className={`min-h-screen bg-slate-950 text-slate-100 flex ${isMobile ? 'flex-col' : 'flex-row'} overflow-hidden select-none`}>
+    <div className={`min-h-screen bg-slate-950 text-slate-100 flex ${isMobile ? 'flex-col' : 'flex-col lg:flex-row'} overflow-x-hidden max-w-full select-none`}>
       
       {/* 1. Left Sidebar (for Desktop and Tablet when expanded) */}
       {(isDesktop || (isTablet && !drawerOpen)) && (
-        <aside className={`${isTablet ? 'w-20' : 'w-64'} bg-slate-900 border-r border-slate-800 flex flex-col shrink-0 h-screen transition-all duration-300`}>
+        <aside className={`${isTablet ? 'hidden md:flex w-20' : 'hidden lg:flex w-64'} bg-slate-900 border-r border-slate-800 flex-col shrink-0 h-screen transition-all duration-300`}>
           {/* Logo & Platform Name */}
           <div
             onClick={onNavigateToPublic}
@@ -130,7 +145,7 @@ export const AuthenticatedWebLayout: React.FC<AuthenticatedWebLayoutProps> = ({
                   key={item.id}
                   onClick={() => onNavigate(item.id)}
                   title={item.label}
-                  className={`w-full flex items-center ${isTablet ? 'justify-center px-2 py-3' : 'gap-3 px-3 py-2'} rounded-xl text-xs font-semibold transition-all ${
+                  className={`w-full flex items-center ${isTablet ? 'justify-center px-2 py-3' : 'gap-3 px-3 py-2'} rounded-xl text-xs font-semibold transition-all min-h-[44px] ${
                     active
                       ? 'bg-cyan-500 text-slate-950 font-bold shadow-lg shadow-cyan-500/20'
                       : 'text-slate-300 hover:bg-slate-850 hover:text-white'
@@ -148,7 +163,7 @@ export const AuthenticatedWebLayout: React.FC<AuthenticatedWebLayoutProps> = ({
             <div className="p-4 border-t border-slate-800 bg-slate-950/40 space-y-2.5">
               <div
                 onClick={() => onNavigate('profile')}
-                className="flex items-center gap-3 cursor-pointer hover:opacity-85 transition-opacity"
+                className="flex items-center gap-3 cursor-pointer hover:opacity-85 transition-opacity min-h-[44px]"
               >
                 <div className="w-9 h-9 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center font-bold text-xs shrink-0">
                   JV
@@ -167,7 +182,7 @@ export const AuthenticatedWebLayout: React.FC<AuthenticatedWebLayoutProps> = ({
               {onLogout && (
                 <button
                   onClick={onLogout}
-                  className="w-full py-2 px-3 rounded-xl bg-slate-850 hover:bg-rose-950/40 text-slate-300 hover:text-rose-300 border border-slate-750 hover:border-rose-500/30 text-xs font-semibold flex items-center justify-center gap-2 transition-colors shadow-sm"
+                  className="w-full py-2 px-3 rounded-xl bg-slate-850 hover:bg-rose-950/40 text-slate-300 hover:text-rose-300 border border-slate-750 hover:border-rose-500/30 text-xs font-semibold flex items-center justify-center gap-2 transition-colors shadow-sm min-h-[44px]"
                 >
                   <LogOut className="w-3.5 h-3.5 text-rose-400 shrink-0" />
                   <span>Sign Out</span>
@@ -198,27 +213,27 @@ export const AuthenticatedWebLayout: React.FC<AuthenticatedWebLayoutProps> = ({
       )}
 
       {/* 2. Main Content Area */}
-      <div className="flex-1 flex flex-col h-screen overflow-hidden">
+      <div className="flex-1 flex flex-col min-h-[100dvh] max-w-full overflow-x-hidden min-w-0">
         
         {/* Top Header */}
-        <header className="h-18 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-6 flex items-center justify-between shrink-0">
+        <header className="h-18 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-4 sm:px-6 flex items-center justify-between shrink-0 sticky top-0 z-30">
           
-          <div className="flex items-center gap-4">
-            {/* Drawer trigger for Mobile or Tablet */}
-            {(isMobile || isTablet) && (
-              <button
-                onClick={() => setDrawerOpen(true)}
-                className="p-2 -ml-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-850"
-              >
-                <Menu className="w-5 h-5" />
-              </button>
-            )}
+          <div className="flex items-center gap-3 min-w-0">
+            {/* Drawer trigger for Mobile / Tablet / Narrow Viewports */}
+            <button
+              onClick={() => setDrawerOpen(true)}
+              aria-expanded={drawerOpen}
+              aria-label="Open Navigation Menu"
+              className={`${isMobile ? 'flex' : 'lg:hidden flex'} p-2 -ml-1 rounded-xl text-slate-400 hover:text-white hover:bg-slate-850 shrink-0 min-h-[44px] min-w-[44px] items-center justify-center transition-colors`}
+            >
+              <Menu className="w-5 h-5" />
+            </button>
 
-            <div>
-              <h1 className="text-base md:text-lg font-bold text-white tracking-tight">
+            <div className="min-w-0">
+              <h1 className="text-base md:text-lg font-bold text-white tracking-tight truncate">
                 {getSectionTitle()}
               </h1>
-              <p className="text-[11px] text-slate-400 hidden sm:block">
+              <p className="text-[11px] text-slate-400 hidden sm:block truncate">
                 Continuous Physiological & Atmospheric Telemetry Active
               </p>
             </div>
@@ -239,11 +254,11 @@ export const AuthenticatedWebLayout: React.FC<AuthenticatedWebLayoutProps> = ({
           </div>
 
           {/* Right Controls: SOS, Notifications, User Profile */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <SyncStatusIndicator compact={true} />
             <button
               onClick={onTriggerSos}
-              className="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white font-extrabold text-xs rounded-xl flex items-center gap-1.5 transition-colors shadow-md shadow-rose-600/30"
+              className="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white font-extrabold text-xs rounded-xl flex items-center gap-1.5 transition-colors shadow-md shadow-rose-600/30 min-h-[44px]"
             >
               <AlertTriangle className="w-3.5 h-3.5" />
               <span>SOS</span>
@@ -253,18 +268,20 @@ export const AuthenticatedWebLayout: React.FC<AuthenticatedWebLayoutProps> = ({
             <div className="relative">
               <button
                 onClick={() => onNavigate('notifications')}
-                className="p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 relative transition-colors"
+                className="p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 relative transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
                 title="Notifications"
+                aria-label="Notifications"
               >
                 <Bell className="w-4 h-4" />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
               </button>
             </div>
 
             {/* User Profile Trigger */}
             <button
               onClick={() => onNavigate('profile')}
-              className="flex items-center gap-2 pl-2 border-l border-slate-800 hover:opacity-85 transition-opacity"
+              aria-label="User Profile Settings"
+              className="flex items-center gap-2 pl-1.5 sm:pl-2 border-l border-slate-800 hover:opacity-85 transition-opacity min-h-[44px]"
             >
               <div className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-xs text-emerald-400">
                 JV
@@ -275,18 +292,18 @@ export const AuthenticatedWebLayout: React.FC<AuthenticatedWebLayoutProps> = ({
         </header>
 
         {/* Main Content Body */}
-        <main className="flex-1 overflow-y-auto bg-slate-950">
-          <div className={`${isMobile ? 'p-3' : isTablet ? 'p-5' : 'p-6'} max-w-7xl mx-auto space-y-6`}>
+        <main className="flex-1 overflow-y-auto overflow-x-hidden bg-slate-950 w-full min-w-0">
+          <div className={`${isMobile ? 'p-3' : isTablet ? 'p-5' : 'p-6'} max-w-7xl mx-auto space-y-6 min-w-0 overflow-x-hidden`}>
             {children}
           </div>
         </main>
 
         {/* Mobile Web Bottom Navigation Bar */}
         {isMobile && (
-          <nav className="bg-slate-900 border-t border-slate-800 px-2 py-2 flex items-center justify-around shrink-0 select-none">
+          <nav className="bg-slate-900 border-t border-slate-800 px-2 py-2 flex items-center justify-around shrink-0 select-none z-30">
             <button
               onClick={() => onNavigate('dashboard')}
-              className={`flex flex-col items-center gap-1 text-[10px] ${
+              className={`flex flex-col items-center gap-1 text-[10px] min-h-[44px] min-w-[44px] justify-center ${
                 currentRoute === 'dashboard' ? 'text-emerald-400 font-bold' : 'text-slate-400'
               }`}
             >
@@ -296,7 +313,7 @@ export const AuthenticatedWebLayout: React.FC<AuthenticatedWebLayoutProps> = ({
 
             <button
               onClick={() => onNavigate('measurements')}
-              className={`flex flex-col items-center gap-1 text-[10px] ${
+              className={`flex flex-col items-center gap-1 text-[10px] min-h-[44px] min-w-[44px] justify-center ${
                 currentRoute === 'measurements' ? 'text-emerald-400 font-bold' : 'text-slate-400'
               }`}
             >
@@ -306,7 +323,7 @@ export const AuthenticatedWebLayout: React.FC<AuthenticatedWebLayoutProps> = ({
 
             <button
               onClick={() => onNavigate('environment')}
-              className={`flex flex-col items-center gap-1 text-[10px] ${
+              className={`flex flex-col items-center gap-1 text-[10px] min-h-[44px] min-w-[44px] justify-center ${
                 currentRoute === 'environment' ? 'text-emerald-400 font-bold' : 'text-slate-400'
               }`}
             >
@@ -315,9 +332,9 @@ export const AuthenticatedWebLayout: React.FC<AuthenticatedWebLayoutProps> = ({
             </button>
 
             <button
-              onClick={() => onNavigate('checkup')}
-              className={`flex flex-col items-center gap-1 text-[10px] ${
-                currentRoute === 'checkup' ? 'text-emerald-400 font-bold' : 'text-slate-400'
+              onClick={() => onNavigate('checkup_calendar')}
+              className={`flex flex-col items-center gap-1 text-[10px] min-h-[44px] min-w-[44px] justify-center ${
+                currentRoute === 'checkup_calendar' ? 'text-emerald-400 font-bold' : 'text-slate-400'
               }`}
             >
               <Stethoscope className="w-4 h-4" />
@@ -326,7 +343,9 @@ export const AuthenticatedWebLayout: React.FC<AuthenticatedWebLayoutProps> = ({
 
             <button
               onClick={() => setDrawerOpen(true)}
-              className="flex flex-col items-center gap-1 text-[10px] text-slate-400 hover:text-white"
+              aria-expanded={drawerOpen}
+              aria-label="Open More Modules Drawer"
+              className="flex flex-col items-center gap-1 text-[10px] text-slate-400 hover:text-white min-h-[44px] min-w-[44px] justify-center"
             >
               <Menu className="w-4 h-4" />
               <span>More</span>
@@ -336,78 +355,101 @@ export const AuthenticatedWebLayout: React.FC<AuthenticatedWebLayoutProps> = ({
 
       </div>
 
-      {/* Mobile / Tablet Drawer Navigation */}
-      {drawerOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex justify-start animate-in fade-in duration-150">
-          <div className="w-72 bg-slate-900 h-full p-4 flex flex-col border-r border-slate-800 shadow-2xl animate-in slide-in-from-left duration-200">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-              <div className="flex items-center gap-2">
-                <Activity className="w-5 h-5 text-emerald-400" />
-                <span className="font-bold text-sm text-white">Platform Navigation</span>
-              </div>
-              <button
-                onClick={() => setDrawerOpen(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-white"
-              >
-                <X className="w-5 h-5" />
-              </button>
+      {/* Mobile / Tablet Drawer Navigation with Smooth CSS Slide Transitions */}
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-hidden={!drawerOpen}
+        aria-label="Mobile Navigation Drawer"
+        className={`fixed inset-0 z-50 transition-all duration-300 ease-in-out ${
+          drawerOpen
+            ? 'opacity-100 pointer-events-auto visible'
+            : 'opacity-0 pointer-events-none invisible'
+        }`}
+      >
+        {/* Backdrop overlay */}
+        <div
+          onClick={() => setDrawerOpen(false)}
+          className={`absolute inset-0 bg-black/80 backdrop-blur-sm transition-opacity duration-300 ease-in-out ${
+            drawerOpen ? 'opacity-100' : 'opacity-0'
+          }`}
+        />
+
+        {/* Slide-out drawer panel with smooth translateX animation from the left */}
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className={`relative w-72 max-w-[85vw] bg-slate-900 h-full p-4 flex flex-col border-r border-slate-800 shadow-2xl transition-transform duration-300 ease-in-out transform ${
+            drawerOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}
+        >
+          <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+            <div className="flex items-center gap-2">
+              <Activity className="w-5 h-5 text-emerald-400" />
+              <span className="font-bold text-sm text-white">Platform Navigation</span>
             </div>
+            <button
+              onClick={() => setDrawerOpen(false)}
+              aria-label="Close Drawer"
+              className="p-1 rounded-lg text-slate-400 hover:text-white min-h-[44px] min-w-[44px] flex items-center justify-center transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
 
-            <nav className="overflow-y-auto space-y-1 py-3 flex-1 no-scrollbar">
-              {navItems.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => {
-                    onNavigate(item.id);
-                    setDrawerOpen(false);
-                  }}
-                  className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs flex items-center gap-3 transition-colors ${
-                    currentRoute === item.id
-                      ? 'bg-emerald-500 text-slate-950 font-bold'
-                      : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-                  }`}
-                >
-                  <span>{item.icon}</span>
-                  <span>{item.label}</span>
-                </button>
-              ))}
-            </nav>
-
-            <div className="pt-3 border-t border-slate-800 space-y-2">
+          <nav className="overflow-y-auto space-y-1 py-3 flex-1 no-scrollbar">
+            {navItems.map((item) => (
               <button
+                key={item.id}
                 onClick={() => {
-                  onNavigate('profile');
+                  onNavigate(item.id);
                   setDrawerOpen(false);
                 }}
-                className="w-full text-left text-xs text-slate-300 flex items-center justify-between p-2.5 rounded-xl bg-slate-950 border border-slate-800"
+                className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs flex items-center gap-3 transition-colors min-h-[44px] ${
+                  currentRoute === item.id
+                    ? 'bg-emerald-500 text-slate-950 font-bold'
+                    : 'text-slate-300 hover:bg-slate-850 hover:text-white'
+                }`}
               >
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-[10px]">
-                    JV
-                  </div>
-                  <span className="font-semibold text-white">{user.name}</span>
-                </div>
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold border border-emerald-500/30">
-                  PATIENT
-                </span>
+                <span>{item.icon}</span>
+                <span className="truncate">{item.label}</span>
               </button>
+            ))}
+          </nav>
 
-              {onLogout && (
-                <button
-                  onClick={() => {
-                    onLogout();
-                    setDrawerOpen(false);
-                  }}
-                  className="w-full py-2.5 px-3 rounded-xl bg-slate-850 hover:bg-rose-950/40 text-slate-300 hover:text-rose-300 border border-slate-750 hover:border-rose-500/30 text-xs font-semibold flex items-center justify-center gap-2 transition-colors"
-                >
-                  <LogOut className="w-3.5 h-3.5 text-rose-400 shrink-0" />
-                  <span>Sign Out</span>
-                </button>
-              )}
-            </div>
+          <div className="pt-3 border-t border-slate-800 space-y-2">
+            <button
+              onClick={() => {
+                onNavigate('profile');
+                setDrawerOpen(false);
+              }}
+              className="w-full text-left text-xs text-slate-300 flex items-center justify-between p-2.5 rounded-xl bg-slate-950 border border-slate-800 min-h-[44px]"
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-[10px] shrink-0">
+                  JV
+                </div>
+                <span className="font-semibold text-white truncate">{user.name}</span>
+              </div>
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold border border-emerald-500/30 shrink-0">
+                PATIENT
+              </span>
+            </button>
+
+            {onLogout && (
+              <button
+                onClick={() => {
+                  onLogout();
+                  setDrawerOpen(false);
+                }}
+                className="w-full py-2.5 px-3 rounded-xl bg-slate-850 hover:bg-rose-950/40 text-slate-300 hover:text-rose-300 border border-slate-750 hover:border-rose-500/30 text-xs font-semibold flex items-center justify-center gap-2 transition-colors min-h-[44px]"
+              >
+                <LogOut className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                <span>Sign Out</span>
+              </button>
+            )}
           </div>
         </div>
-      )}
+      </div>
 
     </div>
   );
