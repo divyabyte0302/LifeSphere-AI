@@ -34,20 +34,15 @@ export const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({
   compact = false,
 }) => {
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('SYNCED');
-  const [lastSync, setLastSync] = useState<Date>(new Date());
-  const [lastSyncFormatted, setLastSyncFormatted] = useState<string>('Just now');
   const [inspectorOpen, setInspectorOpen] = useState(false);
   const [auditLogs, setAuditLogs] = useState<SyncAuditLog[]>([]);
   const [records, setRecords] = useState<MedicalRecordItem[]>([]);
   const [medications, setMedications] = useState<Medication[]>([]);
   const [timeline, setTimeline] = useState<PatientTimelineEvent[]>([]);
 
-  // Update timer for "Last synchronized" humanized display
   useEffect(() => {
-    const unsubStatus = firebaseSyncService.subscribeToSyncStatus((status, time) => {
+    const unsubStatus = firebaseSyncService.subscribeToSyncStatus((status) => {
       setSyncStatus(status);
-      setLastSync(time);
-      setLastSyncFormatted(firebaseSyncService.getFormattedLastSync());
     });
 
     const unsubAudit = firebaseSyncService.subscribeToAuditLogs((logs) => {
@@ -58,17 +53,12 @@ export const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({
     const unsubMeds = firebaseSyncService.subscribeToMedications((m) => setMedications(m));
     const unsubTimeline = firebaseSyncService.subscribeToTimeline((t) => setTimeline(t));
 
-    const interval = setInterval(() => {
-      setLastSyncFormatted(firebaseSyncService.getFormattedLastSync());
-    }, 2000);
-
     return () => {
       unsubStatus();
       unsubAudit();
       unsubRecords();
       unsubMeds();
       unsubTimeline();
-      clearInterval(interval);
     };
   }, []);
 
@@ -128,7 +118,7 @@ export const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({
           )}
 
           <div className="flex items-center gap-1.5">
-            <span className="hidden sm:inline font-bold">
+            <span className="font-bold">
               {syncStatus === 'SYNCED'
                 ? 'Synced'
                 : syncStatus === 'SYNCING'
@@ -136,10 +126,6 @@ export const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({
                 : syncStatus === 'OFFLINE'
                 ? 'Offline (Queued)'
                 : 'Error'}
-            </span>
-            <span className="text-slate-400 hidden md:inline">·</span>
-            <span className="text-[11px] text-slate-300">
-              Last synchronized: <strong className="text-white">{lastSyncFormatted}</strong>
             </span>
           </div>
 
@@ -202,9 +188,9 @@ export const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({
                 </span>
               </div>
               <div className="p-3 bg-slate-950 rounded-2xl border border-slate-800">
-                <span className="text-[10px] text-slate-500 block">Last Synchronized</span>
-                <span className="text-sm font-bold text-amber-400 mt-0.5 block">
-                  {lastSyncFormatted}
+                <span className="text-[10px] text-slate-500 block">Sync Protocol</span>
+                <span className="text-sm font-bold text-emerald-400 mt-0.5 block">
+                  {syncStatus === 'SYNCED' ? 'Real-Time Active' : syncStatus === 'SYNCING' ? 'Syncing...' : syncStatus === 'OFFLINE' ? 'Offline (Queued)' : 'Error'}
                 </span>
               </div>
             </div>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Heart,
   Droplets,
@@ -38,6 +38,7 @@ interface DashboardViewProps {
   setScreen: (module: ScreenModule) => void;
   onRefresh: () => Promise<void>;
   isRefreshing: boolean;
+  isLoading?: boolean;
   isMobile?: boolean;
   user?: UserProfile;
 }
@@ -50,12 +51,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   setScreen,
   onRefresh,
   isRefreshing,
+  isLoading,
   isMobile = false,
   user,
 }) => {
   // Test states for Loading, Empty, and Error
   const [viewState, setViewState] = useState<'normal' | 'loading' | 'empty' | 'error'>('normal');
   const [dismissAlert, setDismissAlert] = useState(false);
+
+  // Perceived performance skeleton loading state for metrics cards during fetch or telemetry sync
+  const showSkeleton = (isLoading ?? false) || isRefreshing || viewState === 'loading';
 
   // Compute taken medications count
   const takenCount = medications.filter((m) => m.isTakenToday).length;
@@ -75,24 +80,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const handlePullRefresh = async () => {
     await onRefresh();
   };
-
-  if (viewState === 'loading') {
-    return (
-      <div className="p-4 md:p-6 space-y-4 max-w-7xl mx-auto">
-        <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-          <div className="h-6 w-48 bg-slate-800 rounded animate-pulse"></div>
-          <button onClick={() => setViewState('normal')} className="text-xs text-emerald-400">Exit Loading State</button>
-        </div>
-        <div className="h-28 bg-slate-900/60 rounded-3xl border border-slate-800 animate-pulse"></div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-24 bg-slate-900 rounded-2xl border border-slate-800 animate-pulse"></div>
-          ))}
-        </div>
-        <div className="h-40 bg-slate-900 rounded-2xl border border-slate-800 animate-pulse"></div>
-      </div>
-    );
-  }
 
   if (viewState === 'error') {
     return (
@@ -157,7 +144,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           className="flex items-center gap-1.5 text-cyan-400 hover:text-cyan-300 font-medium transition-colors"
         >
           <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
-          <span>{isRefreshing ? 'Synchronizing...' : 'Sync Telemetry'}</span>
+          <span>{isRefreshing ? 'Syncing...' : 'Sync Telemetry'}</span>
         </button>
       </div>
 
@@ -249,31 +236,43 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3 text-xs font-mono w-full min-w-0">
-            <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800">
-              <span className="text-[10px] text-slate-400 block">T + 1 Hour</span>
-              <span className="text-base font-bold text-emerald-400 block mt-0.5">32 / 100</span>
-              <span className="text-[10px] text-emerald-400">Low Risk (92% conf)</span>
+          {showSkeleton ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 text-xs font-mono w-full min-w-0" aria-busy="true" aria-label="Loading risk forecasts">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="p-3 rounded-xl bg-slate-900/90 border border-slate-800 animate-pulse h-full min-h-[96px] flex flex-col justify-between">
+                  <div className="h-2.5 w-14 bg-slate-800 rounded"></div>
+                  <div className="h-5 w-20 bg-slate-800 rounded"></div>
+                  <div className="h-2 w-28 bg-slate-800/60 rounded"></div>
+                </div>
+              ))}
             </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 text-xs font-mono w-full min-w-0">
+              <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 h-full min-h-[96px] flex flex-col justify-between">
+                <span className="text-[10px] text-slate-400 block">T + 1 Hour</span>
+                <span className="text-base font-bold text-emerald-400 block mt-0.5">32 / 100</span>
+                <span className="text-[10px] text-emerald-400">Low Risk (92% conf)</span>
+              </div>
 
-            <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800">
-              <span className="text-[10px] text-slate-400 block">T + 6 Hours</span>
-              <span className="text-base font-bold text-amber-400 block mt-0.5">52 / 100</span>
-              <span className="text-[10px] text-amber-300">Moderate Risk (PM2.5 peak)</span>
-            </div>
+              <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 h-full min-h-[96px] flex flex-col justify-between">
+                <span className="text-[10px] text-slate-400 block">T + 6 Hours</span>
+                <span className="text-base font-bold text-amber-400 block mt-0.5">52 / 100</span>
+                <span className="text-[10px] text-amber-300">Moderate Risk (PM2.5 peak)</span>
+              </div>
 
-            <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800">
-              <span className="text-[10px] text-slate-400 block">T + 12 Hours</span>
-              <span className="text-base font-bold text-amber-400 block mt-0.5">44 / 100</span>
-              <span className="text-[10px] text-amber-300">Evening Inversion (84% conf)</span>
-            </div>
+              <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 h-full min-h-[96px] flex flex-col justify-between">
+                <span className="text-[10px] text-slate-400 block">T + 12 Hours</span>
+                <span className="text-base font-bold text-amber-400 block mt-0.5">44 / 100</span>
+                <span className="text-[10px] text-amber-300">Evening Inversion (84% conf)</span>
+              </div>
 
-            <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800">
-              <span className="text-[10px] text-slate-400 block">T + 24 Hours</span>
-              <span className="text-base font-bold text-emerald-400 block mt-0.5">28 / 100</span>
-              <span className="text-[10px] text-emerald-400">Low Risk (Rain cleansing)</span>
+              <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 h-full min-h-[96px] flex flex-col justify-between">
+                <span className="text-[10px] text-slate-400 block">T + 24 Hours</span>
+                <span className="text-base font-bold text-emerald-400 block mt-0.5">28 / 100</span>
+                <span className="text-[10px] text-emerald-400">Low Risk (Rain cleansing)</span>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 
@@ -295,87 +294,116 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </button>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 w-full min-w-0">
-          {/* Heart Rate */}
-          <div
-            onClick={() => setScreen('measurements')}
-            className="rounded-2xl bg-slate-900 border border-slate-800 hover:border-rose-500/40 p-4 cursor-pointer transition-all min-w-0 overflow-hidden"
-          >
-            <div className="flex justify-between items-center text-xs text-slate-400 mb-1">
-              <span className="truncate">Heart Rate</span>
-              <Heart className="w-3.5 h-3.5 text-rose-400 shrink-0" />
-            </div>
-            <div className="flex items-baseline gap-1">
-              <span className="text-2xl font-bold text-white">{vitals.heartRate}</span>
-              <span className="text-[11px] text-slate-400 font-mono">BPM</span>
-            </div>
-            <span className="text-[10px] text-emerald-400 block mt-1 truncate">Resting: {vitals.restingHeartRate} BPM</span>
+        {showSkeleton ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 w-full min-w-0" aria-busy="true" aria-label="Loading physiological measurements">
+            {[
+              { label: 'Heart Rate', unit: 'BPM', icon: <Heart className="w-3.5 h-3.5 text-slate-700" /> },
+              { label: 'Blood Pressure', unit: 'mmHg', icon: <Activity className="w-3.5 h-3.5 text-slate-700" /> },
+              { label: 'Blood Oxygen', unit: '%', icon: <Droplets className="w-3.5 h-3.5 text-slate-700" /> },
+              { label: 'Blood Glucose', unit: 'mg/dL', icon: <Sparkles className="w-3.5 h-3.5 text-slate-700" /> },
+              { label: 'Core Temp', unit: '°C', icon: <Sun className="w-3.5 h-3.5 text-slate-700" /> },
+            ].map((metric, idx) => (
+              <div
+                key={idx}
+                className="h-full min-h-[128px] rounded-2xl bg-slate-900/80 border border-slate-800 p-4 sm:p-5 flex flex-col justify-between min-w-0 overflow-hidden animate-pulse"
+              >
+                <div className="flex justify-between items-center text-xs mb-2">
+                  <div className="h-3.5 w-20 bg-slate-800 rounded"></div>
+                  <div className="w-6 h-6 rounded-full bg-slate-800/80 flex items-center justify-center">
+                    {metric.icon}
+                  </div>
+                </div>
+                <div className="flex items-baseline gap-2 my-1">
+                  <div className="h-7 w-20 bg-slate-800 rounded"></div>
+                  <div className="h-3 w-8 bg-slate-800/60 rounded"></div>
+                </div>
+                <div className="h-2.5 w-28 bg-slate-800/40 rounded mt-1.5"></div>
+              </div>
+            ))}
           </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 w-full min-w-0">
+            {/* Heart Rate */}
+            <div
+              onClick={() => setScreen('measurements')}
+              className="h-full min-h-[128px] rounded-2xl bg-slate-900 border border-slate-800 hover:border-rose-500/40 p-4 sm:p-5 cursor-pointer transition-all min-w-0 overflow-hidden flex flex-col justify-between"
+            >
+              <div className="flex justify-between items-center text-xs text-slate-400 mb-1">
+                <span className="truncate">Heart Rate</span>
+                <Heart className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+              </div>
+              <div className="flex items-baseline gap-1.5 my-0.5">
+                <span className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">{vitals.heartRate}</span>
+                <span className="text-xs text-slate-400 font-mono">BPM</span>
+              </div>
+              <span className="text-[10px] text-emerald-400 block mt-1 truncate">Resting: {vitals.restingHeartRate} BPM</span>
+            </div>
 
-          {/* Blood Pressure */}
-          <div
-            onClick={() => setScreen('measurements')}
-            className="rounded-2xl bg-slate-900 border border-slate-800 hover:border-blue-500/40 p-4 cursor-pointer transition-all min-w-0 overflow-hidden"
-          >
-            <div className="flex justify-between items-center text-xs text-slate-400 mb-1">
-              <span className="truncate">Blood Pressure</span>
-              <Activity className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+            {/* Blood Pressure */}
+            <div
+              onClick={() => setScreen('measurements')}
+              className="h-full min-h-[128px] rounded-2xl bg-slate-900 border border-slate-800 hover:border-blue-500/40 p-4 sm:p-5 cursor-pointer transition-all min-w-0 overflow-hidden flex flex-col justify-between"
+            >
+              <div className="flex justify-between items-center text-xs text-slate-400 mb-1">
+                <span className="truncate">Blood Pressure</span>
+                <Activity className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+              </div>
+              <div className="flex items-baseline gap-1.5 my-0.5">
+                <span className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">{vitals.bloodPressure}</span>
+                <span className="text-xs text-slate-400 font-mono">mmHg</span>
+              </div>
+              <span className="text-[10px] text-emerald-400 block mt-1 truncate">Normal Systolic</span>
             </div>
-            <div className="flex items-baseline gap-1">
-              <span className="text-2xl font-bold text-white">{vitals.bloodPressure}</span>
-              <span className="text-[11px] text-slate-400 font-mono">mmHg</span>
-            </div>
-            <span className="text-[10px] text-emerald-400 block mt-1 truncate">Normal Systolic</span>
-          </div>
 
-          {/* SpO2 */}
-          <div
-            onClick={() => setScreen('measurements')}
-            className="rounded-2xl bg-slate-900 border border-slate-800 hover:border-cyan-500/40 p-4 cursor-pointer transition-all min-w-0 overflow-hidden"
-          >
-            <div className="flex justify-between items-center text-xs text-slate-400 mb-1">
-              <span className="truncate">Blood Oxygen</span>
-              <Droplets className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+            {/* SpO2 */}
+            <div
+              onClick={() => setScreen('measurements')}
+              className="h-full min-h-[128px] rounded-2xl bg-slate-900 border border-slate-800 hover:border-cyan-500/40 p-4 sm:p-5 cursor-pointer transition-all min-w-0 overflow-hidden flex flex-col justify-between"
+            >
+              <div className="flex justify-between items-center text-xs text-slate-400 mb-1">
+                <span className="truncate">Blood Oxygen</span>
+                <Droplets className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+              </div>
+              <div className="flex items-baseline gap-1.5 my-0.5">
+                <span className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">{vitals.spO2.toFixed(1)}</span>
+                <span className="text-xs text-slate-400 font-mono">%</span>
+              </div>
+              <span className="text-[10px] text-emerald-400 block mt-1 truncate">Optimal Saturation</span>
             </div>
-            <div className="flex items-baseline gap-1">
-              <span className="text-2xl font-bold text-white">{vitals.spO2.toFixed(1)}</span>
-              <span className="text-[11px] text-slate-400 font-mono">%</span>
-            </div>
-            <span className="text-[10px] text-emerald-400 block mt-1 truncate">Optimal Saturation</span>
-          </div>
 
-          {/* Blood Glucose */}
-          <div
-            onClick={() => setScreen('measurements')}
-            className="rounded-2xl bg-slate-900 border border-slate-800 hover:border-purple-500/40 p-4 cursor-pointer transition-all min-w-0 overflow-hidden"
-          >
-            <div className="flex justify-between items-center text-xs text-slate-400 mb-1">
-              <span className="truncate">Blood Glucose</span>
-              <Sparkles className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+            {/* Blood Glucose */}
+            <div
+              onClick={() => setScreen('measurements')}
+              className="h-full min-h-[128px] rounded-2xl bg-slate-900 border border-slate-800 hover:border-purple-500/40 p-4 sm:p-5 cursor-pointer transition-all min-w-0 overflow-hidden flex flex-col justify-between"
+            >
+              <div className="flex justify-between items-center text-xs text-slate-400 mb-1">
+                <span className="truncate">Blood Glucose</span>
+                <Sparkles className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+              </div>
+              <div className="flex items-baseline gap-1.5 my-0.5">
+                <span className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">{vitals.glucose}</span>
+                <span className="text-xs text-slate-400 font-mono">mg/dL</span>
+              </div>
+              <span className="text-[10px] text-emerald-400 block mt-1 truncate">Fasting Normal</span>
             </div>
-            <div className="flex items-baseline gap-1">
-              <span className="text-2xl font-bold text-white">{vitals.glucose}</span>
-              <span className="text-[11px] text-slate-400 font-mono">mg/dL</span>
-            </div>
-            <span className="text-[10px] text-emerald-400 block mt-1 truncate">Fasting Normal</span>
-          </div>
 
-          {/* Body Temperature */}
-          <div
-            onClick={() => setScreen('measurements')}
-            className="rounded-2xl bg-slate-900 border border-slate-800 hover:border-amber-500/40 p-4 cursor-pointer transition-all min-w-0 overflow-hidden"
-          >
-            <div className="flex justify-between items-center text-xs text-slate-400 mb-1">
-              <span className="truncate">Core Temp</span>
-              <Sun className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+            {/* Body Temperature */}
+            <div
+              onClick={() => setScreen('measurements')}
+              className="h-full min-h-[128px] rounded-2xl bg-slate-900 border border-slate-800 hover:border-amber-500/40 p-4 sm:p-5 cursor-pointer transition-all min-w-0 overflow-hidden flex flex-col justify-between"
+            >
+              <div className="flex justify-between items-center text-xs text-slate-400 mb-1">
+                <span className="truncate">Core Temp</span>
+                <Sun className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+              </div>
+              <div className="flex items-baseline gap-1.5 my-0.5">
+                <span className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">{vitals.bodyTemperature}</span>
+                <span className="text-xs text-slate-400 font-mono">°C</span>
+              </div>
+              <span className="text-[10px] text-emerald-400 block mt-1 truncate">Afebrile</span>
             </div>
-            <div className="flex items-baseline gap-1">
-              <span className="text-2xl font-bold text-white">{vitals.bodyTemperature}</span>
-              <span className="text-[11px] text-slate-400 font-mono">°C</span>
-            </div>
-            <span className="text-[10px] text-emerald-400 block mt-1 truncate">Afebrile</span>
           </div>
-        </div>
+        )}
       </section>
 
       {/* Hydration Intelligence & Dynamic Target */}
@@ -389,10 +417,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       </section>
 
       {/* 4. Environmental Exposure & 5. Health Trends (Two Column Layout) */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 w-full min-w-0">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 w-full min-w-0">
         
         {/* Environmental Exposure */}
-        <div className="rounded-2xl bg-slate-900 border border-slate-800 p-4 sm:p-5 space-y-3 min-w-0">
+        <div className="rounded-2xl bg-slate-900 border border-slate-800 p-5 space-y-4 h-full flex flex-col justify-between min-w-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Wind className="w-4 h-4 text-amber-400" />
@@ -406,35 +434,47 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full min-w-0">
-            <div className={`p-3 rounded-xl border ${aqiStyle.bg} ${aqiStyle.border}`}>
-              <span className="text-[11px] text-slate-400 block">Air Quality Index</span>
-              <span className={`text-2xl font-bold ${aqiStyle.text}`}>{environment.airQualityIndex}</span>
-              <span className="text-[10px] text-slate-300 block">{aqiStyle.label}</span>
+          {showSkeleton ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full min-w-0" aria-busy="true" aria-label="Loading environmental exposure">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="h-full min-h-[104px] p-4 rounded-xl bg-slate-950/80 border border-slate-850 animate-pulse flex flex-col justify-between">
+                  <div className="h-2.5 w-24 bg-slate-800 rounded"></div>
+                  <div className="h-7 w-20 bg-slate-800 rounded"></div>
+                  <div className="h-2 w-32 bg-slate-800/50 rounded"></div>
+                </div>
+              ))}
             </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full min-w-0">
+              <div className={`h-full min-h-[104px] p-4 rounded-xl border ${aqiStyle.bg} ${aqiStyle.border} flex flex-col justify-between`}>
+                <span className="text-[11px] text-slate-400 block">Air Quality Index</span>
+                <span className={`text-2xl font-bold ${aqiStyle.text}`}>{environment.airQualityIndex}</span>
+                <span className="text-[10px] text-slate-300 block">{aqiStyle.label}</span>
+              </div>
 
-            <div className="p-3 rounded-xl bg-slate-950 border border-slate-850">
-              <span className="text-[11px] text-slate-400 block">PM2.5 Micro-Dust</span>
-              <span className="text-2xl font-bold text-white">{environment.pm25} <span className="text-xs text-slate-400 font-normal">µg/m³</span></span>
-              <span className="text-[10px] text-amber-400 block">Mild Airway Irritant</span>
-            </div>
+              <div className="h-full min-h-[104px] p-4 rounded-xl bg-slate-950 border border-slate-850 flex flex-col justify-between">
+                <span className="text-[11px] text-slate-400 block">PM2.5 Micro-Dust</span>
+                <span className="text-2xl font-bold text-white">{environment.pm25} <span className="text-xs text-slate-400 font-normal">µg/m³</span></span>
+                <span className="text-[10px] text-amber-400 block">Mild Airway Irritant</span>
+              </div>
 
-            <div className="p-3 rounded-xl bg-slate-950 border border-slate-850">
-              <span className="text-[11px] text-slate-400 block">Solar UV Index</span>
-              <span className="text-2xl font-bold text-white">{environment.uvIndex.toFixed(1)} <span className="text-xs text-slate-400 font-normal">/ 12</span></span>
-              <span className="text-[10px] text-orange-400 block">Moderate (SPF 50)</span>
-            </div>
+              <div className="h-full min-h-[104px] p-4 rounded-xl bg-slate-950 border border-slate-850 flex flex-col justify-between">
+                <span className="text-[11px] text-slate-400 block">Solar UV Index</span>
+                <span className="text-2xl font-bold text-white">{environment.uvIndex.toFixed(1)} <span className="text-xs text-slate-400 font-normal">/ 12</span></span>
+                <span className="text-[10px] text-orange-400 block">Moderate (SPF 50)</span>
+              </div>
 
-            <div className="p-3 rounded-xl bg-slate-950 border border-slate-850">
-              <span className="text-[11px] text-slate-400 block">Pollen Count</span>
-              <span className="text-2xl font-bold text-white">{environment.pollenCount} <span className="text-xs text-slate-400 font-normal">gr/m³</span></span>
-              <span className="text-[10px] text-emerald-400 block">{environment.pollenCategory} Allergen</span>
+              <div className="h-full min-h-[104px] p-4 rounded-xl bg-slate-950 border border-slate-850 flex flex-col justify-between">
+                <span className="text-[11px] text-slate-400 block">Pollen Count</span>
+                <span className="text-2xl font-bold text-white">{environment.pollenCount} <span className="text-xs text-slate-400 font-normal">gr/m³</span></span>
+                <span className="text-[10px] text-emerald-400 block">{environment.pollenCategory} Allergen</span>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Health Trends Micro-Chart */}
-        <div className="rounded-2xl bg-slate-900 border border-slate-800 p-5 space-y-3">
+        <div className="rounded-2xl bg-slate-900 border border-slate-800 p-5 space-y-4 h-full flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <TrendingUp className="w-4 h-4 text-blue-400" />
@@ -483,10 +523,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       </div>
 
       {/* 6. Upcoming Monthly Check-up & 7. Medication Summary */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 w-full min-w-0">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 w-full min-w-0">
         
         {/* Upcoming Monthly Check-up Card */}
-        <div className="rounded-2xl bg-slate-900 border border-slate-800 p-5 flex flex-col justify-between">
+        <div className="rounded-2xl bg-slate-900 border border-slate-800 p-5 h-full flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
@@ -516,7 +556,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
 
         {/* Medication Summary Card */}
-        <div className="rounded-2xl bg-slate-900 border border-slate-800 p-5 flex flex-col justify-between">
+        <div className="rounded-2xl bg-slate-900 border border-slate-800 p-5 h-full flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
@@ -562,40 +602,42 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       </div>
 
       {/* 8. Latest Recommendations & 9. Latest Health Report */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 w-full min-w-0">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 w-full min-w-0">
         
         {/* Latest Recommendations Card */}
-        <div className="rounded-2xl bg-slate-900 border border-slate-800 p-5 space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4 text-emerald-400" />
-              Latest AI Preventive Recommendations
-            </span>
-            <button
-              onClick={() => setScreen('recommendations')}
-              className="text-xs text-emerald-400 hover:text-emerald-300 font-medium"
-            >
-              All Directives
-            </button>
-          </div>
+        <div className="rounded-2xl bg-slate-900 border border-slate-800 p-5 space-y-3 h-full flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                <Sparkles className="w-4 h-4 text-emerald-400" />
+                Latest AI Preventive Recommendations
+              </span>
+              <button
+                onClick={() => setScreen('recommendations')}
+                className="text-xs text-emerald-400 hover:text-emerald-300 font-medium"
+              >
+                All Directives
+              </button>
+            </div>
 
-          <div className="space-y-2">
-            {recommendations.slice(0, 2).map((rec) => (
-              <div key={rec.id} className="p-3 rounded-xl bg-slate-950/70 border border-slate-850 space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-white">{rec.title}</span>
-                  <span className="text-[9px] uppercase px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-400 font-bold">
-                    {rec.priority}
-                  </span>
+            <div className="space-y-2">
+              {recommendations.slice(0, 2).map((rec) => (
+                <div key={rec.id} className="p-3 rounded-xl bg-slate-950/70 border border-slate-850 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-white">{rec.title}</span>
+                    <span className="text-[9px] uppercase px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-400 font-bold">
+                      {rec.priority}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 leading-snug">{rec.description}</p>
                 </div>
-                <p className="text-[11px] text-slate-400 leading-snug">{rec.description}</p>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
 
         {/* Latest Health Report Card */}
-        <div className="rounded-2xl bg-slate-900 border border-slate-800 p-5 flex flex-col justify-between">
+        <div className="rounded-2xl bg-slate-900 border border-slate-800 p-5 h-full flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">

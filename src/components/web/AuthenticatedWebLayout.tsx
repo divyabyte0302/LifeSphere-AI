@@ -375,10 +375,11 @@ export const AuthenticatedWebLayout: React.FC<AuthenticatedWebLayoutProps> = ({
           }`}
         />
 
-        {/* Slide-out drawer panel with smooth translateX animation from the left */}
+        {/* Slide-out drawer panel with hardware-accelerated smooth translateX animation from the left */}
         <div
           onClick={(e) => e.stopPropagation()}
-          className={`relative w-72 max-w-[85vw] bg-slate-900 h-full p-4 flex flex-col border-r border-slate-800 shadow-2xl transition-transform duration-300 ease-in-out transform ${
+          style={{ willChange: 'transform' }}
+          className={`relative w-72 max-w-[85vw] bg-slate-900 h-full p-4 flex flex-col border-r border-slate-800 shadow-2xl transition-transform duration-300 ease-in-out transform-gpu will-change-transform ${
             drawerOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
         >
